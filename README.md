@@ -49,7 +49,7 @@ Docker will start:
 - frontend
 - a reverse proxy with Nginx
 
-_By default the docker stack is in mode DEV._ This means that both API and FRONTEND are started using the local code in watch mode. You can update the code the service will be restarted. You can therefor use docker for development.
+_By default the docker stack is in mode DEV._ This means that both API and FRONTEND are started using the local code in watch mode. You can update the code the service will be restarted. You can therefore use docker for development.
 
 > [!IMPORTANT]
 > If you want to use a GPU inside docker locally you need to first follow the `NVIDIA GPU` section from the [deploy documentation](./DEPLOY.md#nvidia-gpu).
