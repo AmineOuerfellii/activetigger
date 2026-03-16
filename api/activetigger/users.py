@@ -69,7 +69,7 @@ class Users:
         if username not in self.failed_attemps:
             return
         # filter attempts in the timewindow
-        now = datetime.now()
+        now =datetime.now(datetime.timezone.utc)
         self.failed_attemps[username] = [
             t for t in self.failed_attemps[username] if (now - t).total_seconds() < timewindow
         ]

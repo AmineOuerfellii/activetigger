@@ -8,6 +8,8 @@ export default defineConfig({
     __BUILD_DATE__: JSON.stringify(new Date().toLocaleDateString('en-GB')), // Format: DD-MM-YYYY
   },
   server: {
+    host: '0.0.0.0',
+    port: 5173,
     allowedHosts: [
       'localhost',
       '127.0.0.1',

@@ -209,7 +209,7 @@ class LanguageModels:
             raise Exception(f"Less than {num_min_annotations_per_label} elements per label")
 
         # name integrating the scheme & user + date
-        current_date = datetime.now()
+        current_date =datetime.now(datetime.timezone.utc)
         model_name = name
 
         # check if a project not already exist

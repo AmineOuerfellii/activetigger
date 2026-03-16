@@ -2878,3 +2878,33 @@ export function useGetMonitoringData(kind: string) {
 
   return { data: getAsyncMemoData(getMonitoringData) || null, reFetchData: reFetch };
 }
+/**
+ * Get semantically similar elements
+ */
+export function useGetSimilarElements(projectSlug: string | null) {
+  const { notify } = useNotifications();
+
+  const getSimilarElements = useCallback(
+    async (elementId: string, feature: string, k: number = 10) => {
+      if (!projectSlug || !elementId || !feature) return null;
+      try {
+        const res = await fetch(
+          `${config.api.url}elements/similar?project_slug=${projectSlug}&element_id=${encodeURIComponent(elementId)}&feature=${encodeURIComponent(feature)}&k=${k}`,
+          {
+            headers: {
+              ...getAuthHeaders(JSON.parse(localStorage.getItem('activeTigger.auth') || '{}'))?.headers,
+            },
+          }
+        );
+        if (!res.ok) throw new Error('Failed to fetch similar elements');
+        return await res.json() as { id: string; score: number }[];
+      } catch (e) {
+        notify({ type: 'error', message: 'Could not fetch similar elements' });
+        return null;
+      }
+    },
+    [projectSlug, notify],
+  );
+
+  return { getSimilarElements };
+}

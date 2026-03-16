@@ -291,3 +291,19 @@ def post_annotation(
             raise HTTPException(status_code=500, detail=str(e)) from e
 
     raise HTTPException(status_code=400, detail="Wrong action")
+@router.get("/elements/similar", dependencies=[Depends(verified_user)])
+def get_similar_elements(project: Annotated[Project, Depends(get_project)],current_user: Annotated[UserInDBModel, Depends(verified_user)],element_id: str = Query(),
+feature: str = Query(),k: int = Query(default=10),) -> list[dict]:
+    """
+    Get semantically similar elements using FAISS
+    """
+    test_rights(ProjectAction.GET, current_user.username, project.name)
+    try:
+        from activetigger.tasks.compute_similarity import ComputeSimilarity
+        embeddings = project.features.get([feature], dataset="annotable")
+        if embeddings.empty:
+            raise HTTPException(status_code=400, detail="Feature not found or empty")
+        similarity = ComputeSimilarity(embeddings)
+        return similarity.search(element_id, k=k)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e

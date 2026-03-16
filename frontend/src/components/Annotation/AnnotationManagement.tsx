@@ -2,6 +2,7 @@ import { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } 
 import { HiOutlineEyeOff } from 'react-icons/hi';
 import { LuRefreshCw } from 'react-icons/lu';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { SimilarElements } from '../SimilarElements';
 import {
   useAddAnnotation,
   useGetElementById,
@@ -314,32 +315,32 @@ export const AnnotationManagement: FC = () => {
             </div>
           </div>
         ) : kindScheme !== 'span' ? (
-          <>
-            <TextClassificationPanel
-              element={element as ElementOutModel}
-              displayConfig={displayConfig}
-              textInFrame={textInFrame}
-              textOutFrame={textOutFrame}
-              validHighlightText={validHighlightText}
-              elementId={elementId as string}
-              lastTag={lastTag as string}
-              phase={effectivePhase}
-              frameRef={frameRef as unknown as HTMLDivElement}
-            />
-          </>
-        ) : (
-          <>
-            <TextSpanPanel
-              elementId={elementId || 'noelement'}
-              displayConfig={displayConfig}
-              postAnnotation={postAnnotation}
-              labels={availableLabels}
-              text={element?.text as string}
-              lastTag={lastTag as string}
-              element={element as ElementOutModel}
-            />
-          </>
-        )}
+            <>
+              <TextClassificationPanel
+                element={element as ElementOutModel}
+                displayConfig={displayConfig}
+                textInFrame={textInFrame}
+                textOutFrame={textOutFrame}
+                validHighlightText={validHighlightText}
+                elementId={elementId as string}
+                lastTag={lastTag as string}
+                phase={effectivePhase}
+                frameRef={frameRef as unknown as HTMLDivElement}
+              />
+            </>
+            ) : (
+            <>
+              <TextSpanPanel
+                elementId={elementId || 'noelement'}
+                displayConfig={displayConfig}
+                postAnnotation={postAnnotation}
+                labels={availableLabels}
+                text={element?.text as string}
+                lastTag={lastTag as string}
+                element={element as ElementOutModel}
+              />
+            </>
+            )}
 
         {elementId !== 'noelement' && (
           <>
@@ -363,7 +364,13 @@ export const AnnotationManagement: FC = () => {
           </>
         )}
       </div>
-
+      {/* Similar elements search */}
+      {element && elementId && elementId !== 'noelement' && (
+        <SimilarElements
+          elementId={elementId}
+          onSelectElement={(id) => navigate(`/projects/${projectName}/tag/${id}`)}
+        />
+      )}
       <div>
         {displayConfig.displayHistory ? (
           <AnnotationHistoryList />
