@@ -8,6 +8,7 @@ import { reorderLabels } from '../../core/utils';
 import { ElementOutModel } from '../../types';
 import { ActiveAnnotationIcon, EmptyAnnotationIcon, NoAnnotationIcon } from '../Icons';
 import { MiddleEllipsis } from './MiddleEllipsis';
+import { WaxAnalysisModal } from '../../components/vizualisation/DisplayWaX';
 
 interface MulticlassInputProps {
   elementId: string;
@@ -17,6 +18,8 @@ interface MulticlassInputProps {
   phase?: string;
   element?: ElementOutModel;
   secondaryLabels?: boolean;
+  currentScheme?: string;   
+  dataset?: string;  
 }
 
 interface LabelType {
@@ -32,8 +35,9 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
   element,
   small = false,
   secondaryLabels = true,
+  currentScheme ='',
+  dataset = 'train',
 }) => {
-  // get the context and set the labels
   const {
     appContext: { displayConfig, activeModel },
   } = useAppContext();
@@ -42,8 +46,9 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
 
   const { addElementInAnnotationSessionHistory } = useAnnotationSessionHistory();
 
+  const [showWax, setShowWax] = useState(false);
+
   const skipAnnotation = useCallback(() => {
-    //update history
     if (element)
       addElementInAnnotationSessionHistory(
         element.element_id,
@@ -52,17 +57,13 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
         undefined,
         true,
       );
-
-    // move to next element
     navigate(`/projects/${projectName}/tag/`);
   }, [navigate, projectName, addElementInAnnotationSessionHistory, element]);
 
-  //grab comment from element history once API has been modified to add this
   const [comment, setComment] = useState<string>(
     element?.history ? element.history[0]?.comment || '' : '',
   );
 
-  //reset comment as for now it's not available in annotation history
   useEffect(() => setComment(element?.history ? element.history[0]?.comment || '' : ''), [element]);
 
   const availableLabels = useMemo<LabelType[]>(
@@ -76,7 +77,6 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
 
   const handleKeyboardEvents = useCallback(
     (ev: KeyboardEvent) => {
-      // prevent shortkey to perturb the inputs
       const activeElement = document.activeElement;
       const isFormField =
         activeElement?.tagName === 'INPUT' ||
@@ -104,11 +104,9 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
   );
 
   useEffect(() => {
-    // manage keyboard shortcut if less than 10 label
     if (availableLabels.length > 0 && availableLabels.length < 10) {
       document.addEventListener('keydown', handleKeyboardEvents);
     }
-
     return () => {
       if (availableLabels.length > 0 && availableLabels.length < 10) {
         document.removeEventListener('keydown', handleKeyboardEvents);
@@ -117,52 +115,67 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
   }, [availableLabels, handleKeyboardEvents]);
 
   const predict_proba = element?.predict.proba ? element.predict.proba.toFixed(2) : 'NA';
-  // const predict_entropy = element?.predict.entropy ? element.predict.entropy.toFixed(2) : 'NA';
 
   const lastAnnotation = useMemo(() => {
     return element?.history && element.history.length > 0 ? element?.history[0] : null;
   }, [element?.history]);
 
   return (
-    <div className=" tag-action-container">
+    <div className="tag-action-container">
       {/* TAGS ACTIONS */}
-
-      {
-        // display buttons for label from the user
-        availableLabels.map((e, i) => (
-          <button
-            type="button"
-            key={e.label}
-            value={e.label}
-            className="tag-action-button btn-annotate-action"
-            onClick={(v) => {
-              if (element) postAnnotation(v.currentTarget.value, elementId, comment);
-            }}
-          >
-            {displayConfig.displayAnnotation ? (
-              lastAnnotation && lastAnnotation.label === e.label ? (
-                <ActiveAnnotationIcon />
-              ) : (
-                <EmptyAnnotationIcon />
-              )
-            ) : null}
-            <MiddleEllipsis label={e.label} />
-            {availableLabels.length < 10 && <span className="badge hotkey">{i + 1}</span>}
-          </button>
-        ))
-      }
+      {availableLabels.map((e, i) => (
+        <button
+          type="button"
+          key={e.label}
+          value={e.label}
+          className="tag-action-button btn-annotate-action"
+          onClick={(v) => {
+            if (element) postAnnotation(v.currentTarget.value, elementId, comment);
+          }}
+        >
+          {displayConfig.displayAnnotation ? (
+            lastAnnotation && lastAnnotation.label === e.label ? (
+              <ActiveAnnotationIcon />
+            ) : (
+              <EmptyAnnotationIcon />
+            )
+          ) : null}
+          <MiddleEllipsis label={e.label} />
+          {availableLabels.length < 10 && <span className="badge hotkey">{i + 1}</span>}
+        </button>
+      ))}
+      {secondaryLabels && (
+        <button
+          type="button"
+          className="btn-annotate-general-action tag-action-button"
+          onClick={() => setShowWax(true)}
+          disabled={!currentScheme}
+          title={!currentScheme ? 'No scheme selected' : 'WAX suggest'}
+        >
+          WAX suggest
+        </button>
+      )}
+      {projectName && (
+        <WaxAnalysisModal
+          show={showWax}
+          onHide={() => setShowWax(false)}
+          projectSlug={projectName}
+          scheme={currentScheme}
+          dataset={dataset}
+        />
+      )}
 
       {/* PREDICTION */}
       {phase == 'train' && displayConfig.displayPrediction && element?.predict.label && (
         <div className="prediction-container">
-          {/* {displayConfig.displayPredictionStat && (
+        {/* {displayConfig.displayPredictionStat && (
             <small className="d-flex align-items-center gap-1 prediction-stats">
               <MdOnlinePrediction size="20" title="Prediction by model" id="prediction-icon" />{' '}
               <Tooltip anchorSelect="#prediction-icon" place="top">
-                Prediction by model
-              </Tooltip>
+                 Prediction by model
+               </Tooltip>
               <Tooltip anchorSelect="#predict-probability" place="top">
-                prediction's probability: {predict_proba}
+                 prediction's probability: {predict_proba}       
               </Tooltip>
             </small>
           )} */}
