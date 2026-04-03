@@ -253,19 +253,115 @@ export function useCreateProject() {
 export function useCreateValidSet() {
   const { notify } = useNotifications();
   const createTestSet = useCallback(
-    async (projectSlug: string, dataset: string, testset: EvalSetDataModel) => {
+    async (projectSlug: string, dataset: string, testset: EvalSetDataModel): Promise<string | null> => {
       const res = await api.POST('/projects/evalset/add', {
         params: {
           query: { project_slug: projectSlug, dataset: dataset },
         },
         body: testset,
       });
-      if (!res.error) notify({ type: 'success', message: 'Test data set uploaded!' });
+
+      if (res.error) {
+        notify({ type: 'error', message: 'Failed to import the dataset'});
+        return null;
+      }
+      const TaskId=res.data
+      if (!TaskId){
+        notify({
+          type:'error',
+          message:'No id for this task is received from server'
+
+        })
+      }
+      return res.data as string;
     },
-    [notify],
+    [notify]
   );
   return createTestSet;
 }
+
+/**
+ * get "Adding evalset" task status
+ */
+export function useEvalSetStatus() {
+  const { notify } = useNotifications();
+  const pollStatus = useCallback((projectSlug: string,task_id: string,onComplete?: (result: any) => void) => {
+      if (!projectSlug || !task_id) {
+        return;
+      }
+      const interval = setInterval(async () => {
+        try {
+          const res = await api.GET('/projects/evalset/task/{task_id}', {
+            params: {path: { task_id: task_id },
+            query: { project_slug: projectSlug }},
+          });
+          if (res.error) {
+            clearInterval(interval);
+            notify({
+              type: 'error',
+              message: 'Failed to check import status',
+            });
+            return;
+          }
+
+          const status = res.data as any;
+          if (status.status === 'added') {
+            clearInterval(interval);
+            notify({
+              type: 'success',
+              message: 'Evalset imported successfully!',
+            });
+            if (status.warning.length > 0){
+            status.warning.forEach((element: string) => {
+              notify({
+              type:"warning",
+              message:element,
+            });
+            });
+          }
+            onComplete?.(status);
+          } 
+          else if (status.status === 'error') {
+            clearInterval(interval);
+            notify({
+              type: 'error',
+              message: `Import failed: ${status.message || 'Unknown error'}`,
+            });
+          } 
+          else if (status.status === 'not_found' || status.status === 'cancel') {
+            clearInterval(interval);
+            notify({
+              type: 'warning',
+              message: 'Task not found (it may have expired or finished)',
+            });
+          }
+        } catch (err: any) {
+          //console.error('Polling error:', err);
+          clearInterval(interval);
+          notify({
+            type: 'error',
+            message: 'Error while checking status',
+          });
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    },
+    [notify]);
+    const cancelTask = useCallback(async (projectSlug: string,task_id: string,) => {
+    try {
+      await api.DELETE('/projects/evalset/task/{task_id}', {
+        params: { path: { task_id }, 
+        query: { project_slug: projectSlug } },
+      });
+      //console.log(task_id)
+      notify({ type: 'warning', message: 'Import cancelled' });
+       } catch (err) {
+      notify({ type: 'error', message: 'Failed to cancel import' });
+      }
+  }, [notify]);
+  return { pollStatus,cancelTask };
+}
+
 
 /**
  * Drop valid set

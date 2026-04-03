@@ -1219,3 +1219,12 @@ class BertopicProjectionData(BaseModel):
 
     nodes: list[BertopicProjectionNode]
     cluster_id_label_mapper: dict
+
+class AddingEvalsetModel(BaseModel):
+    project_slug: str
+    user: str
+    unique_id: str
+    time: datetime.datetime
+    kind: str
+    status: str
+    warnings: list[str] = []

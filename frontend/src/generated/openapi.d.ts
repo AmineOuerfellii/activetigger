@@ -392,6 +392,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/evalset/task/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evalset Status
+         * @description Get the status of an evaluation set import task
+         */
+        get: operations["get_evalset_status_projects_evalset_task__task_id__get"];
+        put?: never;
+        post?: never;
+        /** Cancel Evalset Task */
+        delete: operations["cancel_evalset_task_projects_evalset_task__task_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -2182,18 +2203,12 @@ export interface components {
         };
         /** Body_upload_file_dataset_files_add_dataset_post */
         Body_upload_file_dataset_files_add_dataset_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_upload_file_project_files_add_project_post */
         Body_upload_file_project_files_add_project_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /**
@@ -2413,7 +2428,10 @@ export interface components {
             type: string;
             /** Name */
             name: string;
-            /** Use Default Name */
+            /**
+             * Use Default Name
+             * @default true
+             */
             use_default_name: boolean;
             /** Parameters */
             parameters: {
@@ -3448,9 +3466,9 @@ export interface components {
              */
             n_disagreements: number;
             /** Agreement Percentage */
-            agreement_percentage: number | null;
+            agreement_percentage?: number | null;
             /** Cohen Kappa */
-            cohen_kappa: number | null;
+            cohen_kappa?: number | null;
         };
         /**
          * SchemeModel
@@ -3654,6 +3672,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * WaitingModel
@@ -4233,6 +4255,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evalset_status_projects_evalset_task__task_id__get: {
+        parameters: {
+            query: {
+                project_slug: string;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_evalset_task_projects_evalset_task__task_id__delete: {
+        parameters: {
+            query: {
+                project_slug: string;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

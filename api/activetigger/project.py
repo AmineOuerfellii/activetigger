@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pandas as pd  # type: ignore[import]
+
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 from pandas import DataFrame
@@ -50,6 +51,7 @@ from activetigger.datamodels import (
     QuickModelInModel,
     StaticFileModel,
     UpdateComputing,
+    AddingEvalsetModel,
 )
 from activetigger.db.manager import DatabaseManager
 from activetigger.features import Features
@@ -71,6 +73,7 @@ from activetigger.schemes import Schemes
 from activetigger.tasks.create_project import CreateProject
 from activetigger.tasks.generate_call import GenerateCall
 from activetigger.tasks.update_datasets import UpdateDatasets
+from activetigger.tasks.add_evalset import AddEvalsets
 from activetigger.users import Users
 
 
@@ -433,122 +436,90 @@ class Project:
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
 
-    def add_evalset(
-        self, dataset, evalset: EvalSetDataModel, username: str, project_slug: str
-    ) -> None:
-        """
-        Add a eval dataset (test or valid)
-
-        The eval dataset should :
-        - not contains NA
-        - have a unique id different from the complete dataset
-
-        The id will be modified to indicate imported
-
-        TODO : put this task in the queue
-
-        """
-        if len(evalset.cols_text) == 0:
-            raise Exception("No text column selected for the evalset")
-
-        if self.params.dir is None:
-            raise Exception("Cannot add eval data without a valid dir")
-
-        if evalset.col_label == "":
-            evalset.col_label = None
-
-        if dataset not in ["test", "valid"]:
-            raise Exception("Dataset should be test or valid")
-
-        if dataset == "test" and self.params.test:
-            raise Exception("There is already a test dataset")
-
-        if dataset == "valid" and self.params.valid:
-            raise Exception("There is already a valid dataset")
-
-        csv_buffer = io.StringIO(evalset.csv)
-        df = pd.read_csv(
-            csv_buffer,
-            dtype={evalset.col_id: str, **{col: str for col in evalset.cols_text}},
-            nrows=evalset.n_eval,
+    def adding_evalset(self,
+                       dataset:str,
+                       evalset:EvalSetDataModel,
+                       username:str,
+                       project_slug:str,
+                       )->str:
+        if self.data.train is None:
+            raise Exception("No train data available") # -> although this scenario is out of reach but why not 
+        train_indexes=list(
+            self.data.train.index.astype(str)
         )
-
-        if len(df) > 10000:
-            raise Exception("You valid set is too large")
-
-        # create text column
-        df["text"] = df[evalset.cols_text].apply(
-            lambda x: "\n\n".join([str(i) for i in x if pd.notnull(i)]), axis=1
-        )
-
-        # change names
-        if not evalset.col_label:
-            df = df.rename(columns={evalset.col_id: "id"})
-        else:
-            df = df.rename(
-                columns={
-                    evalset.col_id: "id",
-                    evalset.col_label: "label",
-                }
-            )
-            df["label"] = df["label"].apply(lambda x: str(x) if pd.notna(x) else None)
-
-        # deal with non-unique id
-        # TODO : compare with the general dataset
-        df["id_external"] = df["id"].apply(str)
-        if not ((df["id"].astype(str).apply(slugify)).nunique() == len(df)):
-            df["id"] = [str(i) for i in range(len(df))]
-            print("ID not unique, changed to default id")
-
-        # identify the dataset as imported and set the id
-        df["id"] = df["id"].apply(lambda x: f"imported-{str(x)}")
-        df = df.set_index("id")
-
-        # import labels if specified + scheme // check if the labels are in the scheme
-        if evalset.col_label and evalset.scheme:
-            # Check the label columns if they match the scheme or raise error
-            scheme = self.schemes.available()[evalset.scheme].labels
-            for label in df["label"].dropna().unique():
-                if label not in scheme:
-                    raise Exception(f"Label {label} not in the scheme {evalset.scheme}")
-
-            elements = [
-                {"element_id": element_id, "annotation": label, "comment": ""}
-                for element_id, label in df["label"].dropna().items()
-            ]
-            self.db_manager.projects_service.add_annotations(
+        scheme=self.schemes.available()[evalset.scheme].labels
+        unique_id=self.queue.add_task(
+            "add_eval_set",
+            self.project_slug,
+            AddEvalsets(
+                project=self.params,
                 dataset=dataset,
-                user_name=username,
+                evalset=evalset,
+                username=username,
                 project_slug=project_slug,
-                scheme=evalset.scheme,
-                elements=elements,
-            )
-            print("Valid labels imported")
-
-        # write the dataset
-        if dataset == "test":
-            df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.test_file))
-            self.params.test = True
-            self.data.load_dataset("test")
-        elif dataset == "valid":
-            df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.valid_file))
-            self.params.valid = True
-            self.data.load_dataset("valid")
-        else:
-            raise Exception("Dataset should be test or valid")
-
-        # update the database
-        self.db_manager.projects_service.update_project(
-            self.params.project_slug, jsonable_encoder(self.params)
+                train_index=train_indexes,
+                scheme=scheme,
+            ),
+            queue="cpu",
         )
-
-        # reset the features file
+        print(f"unique_di is {unique_id}")
+        try:
+            self.computing.append(
+                AddingEvalsetModel(
+                    user=username,
+                    project_slug=self.project_slug,
+                    unique_id=unique_id,
+                    time=datetime.now(timezone.utc),
+                    kind="add_eval_set",
+                    status="adding",   
+                )
+            )
+        except Exception as e:
+            raise Exception(f"Errror {e}")
+            
+        return unique_id
+    
+    def finish_adding_evalset(
+        self,
+        un_id:str,
+        )->None:
+        """
+        This Func called once the evaleset starts adding  
+        """
+        task=self.queue.get(un_id)
+        if task is None:
+            raise Exception (f"Task {un_id} is not Found in the queue")
+        if task.future is None:
+            raise Exception (f"Task {un_id} has no Future")
+        entry=next((c for c in self.computing if c.unique_id==un_id),None)
+        exce=task.future.exception()
+        if exce is not None:
+            if entry:
+                entry.status="error"
+            raise Exception(f"evaluation set import has failed :( :{exce})")
+        res=task.future.result()
+        if entry.status=="cancel":
+            print("it is cancelled")
+            self.clean_process(entry)
+            return
+        self.params=res["project_params"]
+        self.db_manager.projects_service.update_project(
+            self.project_slug,jsonable_encoder(self.params)
+        )
+        if res["elements"] and res["scheme"]:
+            self.db_manager.projects_service.add_annotation(
+                dataset=res["dataset"],
+                user_name=res["username"],
+                project_slug=res["project_slug"],
+                scheme=res["scheme"],
+                elements=res["elements"],
+            )
         self.features.reset_features_file()
-        self.quickmodels.drop_models(which="all")
-
-        # reload the data
-        self.data.load_dataset(dataset)
-
+        self.quickmodels.drop_models(which="all")    
+        if entry:
+            entry.warnings = res.get("warnings", [])
+            entry.status="added"
+            
     def train_quickmodel(
         self,
         quickmodel: QuickModelInModel,
@@ -1511,8 +1482,10 @@ class Project:
         """
         Clean a process from computing and queue
         """
-        self.computing.remove(e)
-        self.queue.delete(e.unique_id)
+        if e in self.computing:
+            #added as simple check 
+            self.computing.remove(e)
+            self.queue.delete(e.unique_id)
 
     def update_processes(self) -> None:
         """
@@ -1522,7 +1495,7 @@ class Project:
         - manage error if needed
         """
         add_predictions = {}
-
+        delayed_clean = False
         # loop on the current process
         for e in self.computing.copy():
             # get the process
@@ -1649,6 +1622,12 @@ class Project:
                         events = cast(EventsModel, results)
                         self.bertopic.add(bertopic_model)
                         self.monitoring.close_process(bertopic_model.unique_id, events)
+                    case "add_eval_set":
+                        import threading
+                        e=cast(AddingEvalsetModel,e)
+                        self.finish_adding_evalset(e.unique_id)
+                        delayed_clean=True
+                        threading.Timer(10, self.clean_process, args=[e]).start()
             except Exception as ex:
                 print(f"Error in {e.kind} : {ex}")
                 self.errors.add(f"Error in {e.kind} : {str(ex)}")
@@ -1662,7 +1641,8 @@ class Project:
                         )
             # clean the process from the list and the queue
             finally:
-                self.clean_process(e)
+                if not delayed_clean:
+                    self.clean_process(e)
 
         # if there are predictions, add them
         if len(add_predictions) > 0:
