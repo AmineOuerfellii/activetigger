@@ -642,6 +642,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/elements/wax_suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wax Suggestion */
+        post: operations["wax_suggestion_elements_wax_suggest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/elements/wax_status/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Wax Status */
+        get: operations["wax_status_elements_wax_status__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/schemes/label/rename": {
         parameters: {
             query?: never;
@@ -2182,18 +2216,12 @@ export interface components {
         };
         /** Body_upload_file_dataset_files_add_dataset_post */
         Body_upload_file_dataset_files_add_dataset_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_upload_file_project_files_add_project_post */
         Body_upload_file_project_files_add_project_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /**
@@ -2413,7 +2441,10 @@ export interface components {
             type: string;
             /** Name */
             name: string;
-            /** Use Default Name */
+            /**
+             * Use Default Name
+             * @default true
+             */
             use_default_name: boolean;
             /** Parameters */
             parameters: {
@@ -3448,9 +3479,9 @@ export interface components {
              */
             n_disagreements: number;
             /** Agreement Percentage */
-            agreement_percentage: number | null;
+            agreement_percentage?: number | null;
             /** Cohen Kappa */
-            cohen_kappa: number | null;
+            cohen_kappa?: number | null;
         };
         /**
          * SchemeModel
@@ -3654,6 +3685,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * WaitingModel
@@ -4667,6 +4702,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wax_suggestion_elements_wax_suggest_post: {
+        parameters: {
+            query: {
+                scheme: string;
+                dataset?: string;
+                n?: number;
+                project_slug: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wax_status_elements_wax_status__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

@@ -8,6 +8,7 @@ import { reorderLabels } from '../../core/utils';
 import { ElementOutModel } from '../../types';
 import { ActiveAnnotationIcon, EmptyAnnotationIcon, NoAnnotationIcon } from '../Icons';
 import { MiddleEllipsis } from './MiddleEllipsis';
+import { WaxAnalysisModal } from '../../components/vizualisation/DisplayWax';
 
 interface MulticlassInputProps {
   elementId: string;
@@ -17,6 +18,8 @@ interface MulticlassInputProps {
   phase?: string;
   element?: ElementOutModel;
   secondaryLabels?: boolean;
+  currentScheme?: string;   
+  dataset?: string;
 }
 
 interface LabelType {
@@ -32,6 +35,8 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
   element,
   small = false,
   secondaryLabels = true,
+  currentScheme='',
+  dataset='train',
 }) => {
   // get the context and set the labels
   const {
@@ -123,6 +128,8 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
     return element?.history && element.history.length > 0 ? element?.history[0] : null;
   }, [element?.history]);
 
+  const [showWax, setShowWax] = useState(false);
+  console.log(currentScheme);
   return (
     <div className=" tag-action-container">
       {/* TAGS ACTIONS */}
@@ -151,7 +158,26 @@ export const MulticlassInput: FC<MulticlassInputProps> = ({
           </button>
         ))
       }
-
+            {secondaryLabels && (
+        <button
+          type="button"
+          className="btn-annotate-general-action tag-action-button"
+          onClick={() => setShowWax(true)}
+          disabled={!currentScheme}
+          title={!currentScheme ? 'No scheme selected' : 'WAX suggest'}
+        >
+          WAX suggest
+        </button>
+      )}
+      {projectName && (
+        <WaxAnalysisModal
+          show={showWax}
+          onHide={() => setShowWax(false)}
+          projectSlug={projectName}
+          scheme={currentScheme}
+          dataset={dataset}
+        />
+      )}
       {/* PREDICTION */}
       {phase == 'train' && displayConfig.displayPrediction && element?.predict.label && (
         <div className="prediction-container">

@@ -1,7 +1,7 @@
 import datetime
 from enum import Enum, StrEnum
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, List, Literal, Optional
 
 from pandas import DataFrame  # type: ignore[import]
 from pydantic import BaseModel, ConfigDict  # for dataframe
@@ -1219,3 +1219,21 @@ class BertopicProjectionData(BaseModel):
 
     nodes: list[BertopicProjectionNode]
     cluster_id_label_mapper: dict
+
+class compute_waxModel(BaseModel):
+    """
+    The returned data after Wasserstein distance computaion using source and target datasets
+    """
+    source_texts: List[str]
+    target_texts: List[str]
+    model: str = "all-MiniLM-L6-v2"
+    p: int = 2
+    q: int = 2
+    alpha: int = 2
+    beta: int = 2
+    n: int = 100
+    reg: float = 0.01
+    r: int = 4
+    C: int = 3
+    lr: float = 0.01
+    n_iter: int = 200

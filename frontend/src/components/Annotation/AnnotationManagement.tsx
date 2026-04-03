@@ -354,6 +354,8 @@ export const AnnotationManagement: FC = () => {
                 labels={availableLabels}
                 phase={effectivePhase}
                 element={element as ElementOutModel}
+                currentScheme={currentScheme}
+                dataset={effectivePhase === 'train' ? 'train' : ''}
               />
             )}
             {kindScheme == 'multilabel' && (

@@ -211,3 +211,18 @@ export interface GenModel {
   endpoint?: string;
   credentials?: string;
 }
+
+export interface WaxParams {
+  model: string;
+  p: number;
+  q: number;
+  alpha: number;
+  beta: number;
+  n: number;
+  reg: number;
+  r: number;
+  C: number;
+  lr: number;
+  n_iter: number;
+  n_suggest: number;
+}

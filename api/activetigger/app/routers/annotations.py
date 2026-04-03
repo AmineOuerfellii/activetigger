@@ -23,9 +23,10 @@ from activetigger.datamodels import (
 )
 from activetigger.orchestrator import orchestrator
 from activetigger.project import Project
-
+import asyncio
+from activetigger.tasks.compute_wax import ComputeWaXUWaX
 router = APIRouter(tags=["annotations"])
-
+wax_task_store = {}
 
 @router.post("/elements/next", dependencies=[Depends(verified_user)])
 def get_next(
@@ -289,3 +290,66 @@ def post_annotation(
             raise HTTPException(status_code=500, detail=str(e)) from e
 
     raise HTTPException(status_code=400, detail="Wrong action")
+
+# Adding a route to get WaX Suggestions for an element
+@router.post("/elements/wax_suggest", dependencies=[Depends(verified_user)])
+async def wax_suggestion(
+    project: Annotated[Project, Depends(get_project)],
+    current_user: Annotated[UserInDBModel, Depends(verified_user)],
+    scheme: str = Query(...),
+    dataset: str = Query("train"),
+    n: int = Query(10),
+) -> dict:
+    test_rights(ProjectAction.GET, username=current_user.username, project_slug=project.name)
+    if not scheme or scheme.strip() == "":
+        raise HTTPException(status_code=400, detail="scheme parameter is required")
+    labeled, unlabeled = project.get_data_s_current_status(scheme=scheme, dataset=dataset)
+    if len(labeled) < 10:
+        raise HTTPException(status_code=400, detail=f"Need at least 10 labeled elements (currently {len(labeled)})")
+    if len(unlabeled) == 0:
+        raise HTTPException(status_code=400, detail="No unlabeled elements available")
+    task = ComputeWaXUWaX(
+        source_texts=[item["text"] for item in labeled],
+        target_texts=[item["text"] for item in unlabeled],
+        path_process=orchestrator.path_models,
+    )
+    task_id=task.unique_id
+    wax_task_store[task_id] = {"status": "running", "result": None, "error": None}
+    #maybe i'll add Lable relevance instead of 
+    async def run():
+        try:
+            result = await asyncio.to_thread(task.__call__)
+            instance_relevance = result.get("instance_relevance", [])
+            top_indices = sorted(range(len(instance_relevance)), key=lambda i: instance_relevance[i], reverse=True)[:n]
+            wax_task_store[task_id] = {
+                "status": "done",
+                "result": {
+                    "wax_distance": result.get("wax_distance"),
+                    "feature_relevance": result.get("feature_relevance"),
+                    "elements_id": [unlabeled[i]["id"] for i in top_indices],
+                    "elements_text":[unlabeled[i]["text"]for i in top_indices],
+                    "scores": [instance_relevance[i] for i in top_indices],
+                    "n_labeled": len(labeled),
+                    "n_unlabeled": len(unlabeled),
+                },
+                "error": None,
+            }
+            project.monitoring.register_process(
+            process_name=task_id,
+            kind="computeWaxUwaX",
+            parameters={},
+            user_name=current_user.username,
+            )
+        except Exception as e:
+            wax_task_store[task_id] = {"status": "error", "result": None, "error": str(e)}
+    asyncio.create_task(run())
+    return {"task_id": task_id}
+
+
+@router.get("/elements/wax_status/{task_id}", dependencies=[Depends(verified_user)])
+def wax_status(task_id: str) -> dict:
+    print("getting task_id",task_id)
+    task = wax_task_store.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task

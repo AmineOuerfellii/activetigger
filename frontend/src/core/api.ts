@@ -24,6 +24,7 @@ import {
   SupportedAPI,
   TextDatasetModel,
   newBertModel,
+  WaxParams,
 } from '../types';
 import config from './config';
 import { formatApiError, HttpError } from './HTTPError';
@@ -2927,4 +2928,38 @@ export function useGetMonitoringData(kind: string) {
   const reFetch = useCallback(() => setFetchTrigger((f) => !f), []);
 
   return { data: getAsyncMemoData(getMonitoringData) || null, reFetchData: reFetch };
+}
+
+export function useWaxSuggest() {
+  const { notify } = useNotifications();
+const start = useCallback(
+  async (projectSlug: string, scheme: string, dataset: string, params: WaxParams) => {
+    const res = await api.POST('/elements/wax_suggest', {
+      params: { query: { project_slug: projectSlug, scheme, dataset, n: params.n_suggest } },
+      query: {
+        model: params.model,
+        p: params.p, q: params.q,
+        alpha: params.alpha, beta: params.beta,
+        n: params.n, reg: params.reg,
+        r: params.r, C: params.C,
+        lr: params.lr, n_iter: params.n_iter,
+      },
+    });
+    if (res.error) {
+      notify({ type: 'error', message: 'WAX suggestion failed to start' });
+      return null;
+    }
+    return res.data as { task_id: string };
+  },
+  [notify],
+);
+  const poll = useCallback(async (taskId: string) => {
+    if(!taskId) return null;
+    const res = await api.GET('/elements/wax_status/{task_id}', {
+      params: { path: { task_id: taskId }},
+    });
+    if (res.error) return null;
+    return res.data as { status: string; result: any; error: string | null };
+  }, []);
+  return { start, poll };
 }

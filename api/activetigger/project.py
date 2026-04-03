@@ -1670,6 +1670,27 @@ class Project:
             for err in errors:
                 self.errors.add(err)
 
+    def get_data_s_current_status(self,scheme,dataset):
+        """
+        This Function will enable us to get labled and unlabled data from the corpus
+        one of the uses is to compute the Wasserstein disnatnce using WaX -> U-WaX will bfully 
+        implemented later
+        """
+        availabe_schemes = self.schemes.available()
+        df_scheme=self.schemes.get_scheme(scheme,complete=False,datasets=[dataset])
+        labeled_data=df_scheme[df_scheme['labels'].notna()]#This will serve as source
+        unlabeled_data=df_scheme[df_scheme["labels"].isna()]#this will serve as target
+        if labeled_data.empty or unlabeled_data.empty:
+            return []
+        data_df = getattr(self.data, dataset, None)
+        if data_df is None:
+            raise ValueError(f"No {dataset} dataset available")
+        def to_list(df):
+            if df.empty:
+                return []
+            merged = df.join(data_df[['text']], how='inner')
+            return [{"id": idx, "text": row['text']} for idx, row in merged.iterrows()]
+        return to_list(labeled_data), to_list(unlabeled_data)
     # def dump(self, with_files=True) -> None:
     #     """
     #     Dump the project in a archive
