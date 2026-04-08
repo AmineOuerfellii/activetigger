@@ -209,7 +209,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                   <label htmlFor="n_test">Number of rows to import</label>
                   <input id="n_test" type="number" {...register('n_eval')} />
                   {Processing? ( 
-                    <div onClick={()=>{setProcessing(false);navigate(`/project/${projectSlug}/settings`)}}>
+                    <div onClick={()=>{setProcessing(false);setData(null);navigate(0)}}>
                       <StopProcessButton projectSlug={projectSlug} kind={`add_evalset_${dataset}`}/>
                     </div>
                   ):(<button type="submit" className="btn-submit" >
