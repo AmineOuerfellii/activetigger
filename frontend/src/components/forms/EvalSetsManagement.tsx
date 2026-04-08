@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { EvalSetModel } from '../../types';
 import { StopProcessButton } from '../StopProcessButton';
 
+
 // format of the data table
 export interface DataType {
   headers: string[];
@@ -130,7 +131,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
 
       {!exist && (
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="col-lg-6" >
+          <div className="col-lg-6" style={{maxWidth: '100%', overflowX: 'auto'}}>
             <div className="explanations">
               No {datasetCleanForPrinting} data set has been created. You can upload a{' '}
               {datasetCleanForPrinting} set. Careful : all features will be dropped and need to be
@@ -142,13 +143,13 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
             {
               // display datable if data available
               data !== null && (
-                <div style={{display:'flex', flexDirection:'column',minWidth: 0}} >
+                <div>
                   <div className="explanations">Preview</div>
                   <div>
                     Size of the dataset : <b>{data.data.length - 1}</b>
                   </div>
                   {/* TODO: AXEL if too many rows, the page expands and it messes everything */}
-                  <div style={{overflowX: 'scroll' ,minWidth:0}}>
+                  <style>{`.rdt_Table {display: block;overflow-x: auto;} .rdt_TableHeadRow, .rdt_TableRow { min-width: unset; } .rdt_TableCell, .rdt_TableCol { min-width: unset;`}</style>
                   <DataTable<Record<DataType['headers'][number], string | number>>
                     columns={data.headers.map((h) => ({
                       name: h,
@@ -157,14 +158,13 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                         const v = row[h];
                         return typeof v === 'bigint' ? Number(v) : v;
                       },
-                      width: '200px',
+                      width:'200px',
                       wrap:true,
                     }))}
                     data={
                       data.data.slice(0, 5) as Record<keyof DataType['headers'], string | number>[]
                     }
                   />
-                  </div>
                 </div>
               )
             }
@@ -209,7 +209,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                   <label htmlFor="n_test">Number of rows to import</label>
                   <input id="n_test" type="number" {...register('n_eval')} />
                   {Processing? ( 
-                    <div onClick={()=>{setProcessing(false);}}>
+                    <div onClick={()=>{setProcessing(false);navigate(`/project/${projectSlug}/settings`)}}>
                       <StopProcessButton projectSlug={projectSlug} kind={`add_evalset_${dataset}`}/>
                     </div>
                   ):(<button type="submit" className="btn-submit" >
@@ -221,7 +221,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
           </div>
         </form>
       )}
-      <Modal show={alertDrop} onHide={() => setAlertDrop(false)}>
+      <Modal show={alertDrop} onHide={() => setAlertDrop(false)} style={{zIndex:'1050'}}>
         <Modal.Header closeButton>
           <Modal.Title>Drop the validation set</Modal.Title>
         </Modal.Header>
