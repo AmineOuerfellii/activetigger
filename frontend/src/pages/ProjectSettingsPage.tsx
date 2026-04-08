@@ -20,7 +20,7 @@ export const ProjectSettingsPage: FC = () => {
   // get data
   const { projectName: projectSlug } = useParams();
   const {
-    appContext: { currentScheme, currentProject: project, history },
+    appContext: { currentScheme, currentProject: project, history},
     setAppContext,
   } = useAppContext();
 
@@ -54,6 +54,7 @@ export const ProjectSettingsPage: FC = () => {
 
   if (!projectSlug || !project) return;
 
+
   return (
     <ProjectPageLayout projectName={projectSlug} currentAction="settings">
       <Tabs id="panel" className="mt-3" defaultActiveKey="parameters">
@@ -76,14 +77,16 @@ export const ProjectSettingsPage: FC = () => {
             projectSlug={projectSlug}
             currentScheme={currentScheme || ''}
             dataset={'valid'}
-            exist={project?.params.valid}
+            exist_val={project?.params.valid}
+            exist_test={project?.params.test}
           />
           <hr />
           <EvalSetsManagement
             projectSlug={projectSlug}
             currentScheme={currentScheme || ''}
             dataset={'test'}
-            exist={project?.params.test}
+            exist_val={project?.params.valid}
+            exist_test={project?.params.test}
           />
         </Tab>
 

@@ -260,7 +260,11 @@ export function useCreateValidSet() {
         },
         body: testset,
       });
-      if (!res.error) notify({ type: 'success', message: 'Test data set uploaded!' });
+      if (!res.error) {notify({ type: 'success', message: 'Test data set uploaded!' });
+      return true;}
+      else{
+        return false;
+      }
     },
     [notify],
   );

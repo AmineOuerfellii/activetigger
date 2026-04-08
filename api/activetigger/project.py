@@ -62,7 +62,6 @@ from activetigger.functions import (
     regex_contains,
     remove_labels_without_enough_annotations,
     sanitize_query_expression,
-    slugify,
 )
 from activetigger.generation.generations import Generations
 from activetigger.languagemodels import LanguageModels
@@ -75,6 +74,7 @@ from activetigger.schemes import Schemes
 from activetigger.tasks.create_project import CreateProject
 from activetigger.tasks.generate_call import GenerateCall
 from activetigger.tasks.update_datasets import UpdateDatasets
+from activetigger.tasks.add_evalset import AddEvalSet
 from activetigger.users import Users
 
 
@@ -417,6 +417,7 @@ class Project:
         if not self.params.dir:
             raise Exception("No directory for project")
         path = self.params.dir.joinpath(f"{dataset}.parquet")
+        print(f"{dataset}.parquet")
         if not path.exists():
             raise Exception("No eval data available")
         os.remove(path)
@@ -426,30 +427,29 @@ class Project:
         if dataset == "test":
             self.data.test = None
             self.params.test = False
+            self.params.n_test=0
         if dataset == "valid":
             self.data.valid = None
-            self.params.valid = False
+            self.params.valid = False        
+            self.params.n_valid=0
         self.db_manager.projects_service.update_project(
             self.params.project_slug, jsonable_encoder(self.params)
         )
 
+        #added reload datasets to avoid data leaks 
+        print(self.params.n_total)
+        self.data.load_dataset(dataset="all")
         # reset the features file
+        
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
+        
 
     def add_evalset(
         self, dataset, evalset: EvalSetDataModel, username: str, project_slug: str
     ) -> None:
         """
         Add a eval dataset (test or valid)
-
-        The eval dataset should :
-        - not contains NA
-        - have a unique id different from the complete dataset
-
-        The id will be modified to indicate imported
-
-        TODO : put this task in the queue
 
         """
         if len(evalset.cols_text) == 0:
@@ -462,97 +462,54 @@ class Project:
             evalset.col_label = None
 
         if dataset not in ["test", "valid"]:
-            raise Exception("Dataset should be test or valid")
+            raise Exception("Dataset should be either test or valid")
 
         if dataset == "test" and self.params.test:
             raise Exception("There is already a test dataset")
 
         if dataset == "valid" and self.params.valid:
             raise Exception("There is already a valid dataset")
+        
+        try:
+            #check if another task is running for same dataset only one add task for a dataset is allowed 
+            t=next((t for t in self.queue.current if t.state=="running" and t.task.kind==f"add_evalset_{dataset}"),None)
+            if t :
+                raise Exception(f"There exists a task currently running for adding a {dataset} set")
+            
+            #get the complete dataset's indexes
+            all_data_ids= self.data.get_full_id()
+            #get the scheme
+            available_scheme=self.schemes.available()[evalset.scheme].labels
+            #define the task
+            task=AddEvalSet(dataset=dataset,
+                            evalset=evalset,
+                            username=username,
+                            project_slug=project_slug,
+                            project=self.params,
+                            index=all_data_ids,
+                            scheme=available_scheme)
 
-        csv_buffer = io.StringIO(evalset.csv)
-        df = pd.read_csv(
-            csv_buffer,
-            dtype={evalset.col_id: str, **{col: str for col in evalset.cols_text}},
-            nrows=evalset.n_eval,
-        )
-
-        if len(df) > 10000:
-            raise Exception("You valid set is too large")
-
-        # create text column
-        df["text"] = df[evalset.cols_text].apply(
-            lambda x: "\n\n".join([str(i) for i in x if pd.notnull(i)]), axis=1
-        )
-
-        # change names
-        if not evalset.col_label:
-            df = df.rename(columns={evalset.col_id: "id"})
-        else:
-            df = df.rename(
-                columns={
-                    evalset.col_id: "id",
-                    evalset.col_label: "label",
-                }
+            #adding the task
+            unique_id=self.queue.add_task(task.kind,
+                                          self.project_slug,
+                                          task,
+                                          queue="cpu",
+                                          )
+            print(unique_id)
+            #adding to the computing queue
+            self.computing.append(
+                ProcessComputing(
+                    user=username,
+                    unique_id=unique_id,
+                    time=datetime.now(timezone.utc),
+                    kind=task.kind,
+                )
             )
-            df["label"] = df["label"].apply(lambda x: str(x) if pd.notna(x) else None)
-
-        # deal with non-unique id
-        # TODO : compare with the general dataset
-        df["id_external"] = df["id"].apply(str)
-        if not ((df["id"].astype(str).apply(slugify)).nunique() == len(df)):
-            df["id"] = [str(i) for i in range(len(df))]
-            print("ID not unique, changed to default id")
-
-        # identify the dataset as imported and set the id
-        df["id"] = df["id"].apply(lambda x: f"imported-{str(x)}")
-        df = df.set_index("id")
-
-        # import labels if specified + scheme // check if the labels are in the scheme
-        if evalset.col_label and evalset.scheme:
-            # Check the label columns if they match the scheme or raise error
-            scheme = self.schemes.available()[evalset.scheme].labels
-            for label in df["label"].dropna().unique():
-                if label not in scheme:
-                    raise Exception(f"Label {label} not in the scheme {evalset.scheme}")
-
-            elements = [
-                {"element_id": element_id, "annotation": label, "comment": ""}
-                for element_id, label in df["label"].dropna().items()
-            ]
-            self.db_manager.projects_service.add_annotations(
-                dataset=dataset,
-                user_name=username,
-                project_slug=project_slug,
-                scheme=evalset.scheme,
-                elements=elements,
-            )
-            print("Valid labels imported")
-
-        # write the dataset
-        if dataset == "test":
-            df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.test_file))
-            self.params.test = True
-            self.data.load_dataset("test")
-        elif dataset == "valid":
-            df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.valid_file))
-            self.params.valid = True
-            self.data.load_dataset("valid")
-        else:
-            raise Exception("Dataset should be test or valid")
-
-        # update the database
-        self.db_manager.projects_service.update_project(
-            self.params.project_slug, jsonable_encoder(self.params)
-        )
-
-        # reset the features file
-        self.features.reset_features_file()
-        self.quickmodels.drop_models(which="all")
-
-        # reload the data
-        self.data.load_dataset(dataset)
-
+            
+        except Exception as e:
+            print("oo",e)
+            raise e
+        
     def train_quickmodel(
         self,
         quickmodel: QuickModelInModel,
@@ -1766,6 +1723,34 @@ class Project:
                         events = cast(EventsModel, results)
                         self.bertopic.add(bertopic_model)
                         self.monitoring.close_process(bertopic_model.unique_id, events)
+                    case str() as kind if kind.startswith("add_evalset_"):
+                        print("level 1")
+                        e = cast(ProcessComputing, e)
+                        print("level 2")
+                        if results is None:
+                            print("No result from evalset addition")
+                            raise Exception("No result from evalset addition")
+                        else:
+                            print("level 3")
+                            self.db_manager.projects_service.add_annotations(*results[0])
+                            print('level 4',*results[0])
+                            #print(f"{results[0][0]} labels imported")
+                            #update the database with the new dataset info (test/valid + n_test/n_valid)
+                            if results[1].test:
+                                self.params.test = results[1].test
+                                self.params.n_test = results[1].n_test
+                            else:
+                                self.params.valid = results[1].valid
+                                self.params.n_valid = results[1].n_valid  # Amine: i kept this if the variable is used throught the app localy 
+                            self.db_manager.projects_service.update_project(
+                                self.params.project_slug, jsonable_encoder(results[1])
+                            )
+                            #reset feature file and reload the dataset to be able to compute features on the new evalset
+                            print(results[0][0])
+                            self.features.reset_features_file()
+                            self.quickmodels.drop_models(which="all")
+                            self.data.load_dataset(results[0][0])
+                            
             except Exception as ex:
                 print(f"Error in {e.kind} : {ex}")
                 self.errors.add(f"Error in {e.kind} : {str(ex)}")

@@ -5,13 +5,14 @@ import Select from 'react-select';
 
 import { omit } from 'lodash';
 import { unparse } from 'papaparse';
-import { useCreateValidSet, useDropEvalSet } from '../../core/api';
+import { useCreateValidSet, useDropEvalSet} from '../../core/api';
 import { useNotifications } from '../../core/notifications';
 import { loadFile } from '../../core/utils';
 
 import { Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { EvalSetModel } from '../../types';
+import { StopProcessButton } from '../StopProcessButton';
 
 // format of the data table
 export interface DataType {
@@ -24,7 +25,8 @@ export interface EvalSetsManagementModel {
   projectSlug: string;
   currentScheme: string;
   dataset: string;
-  exist: boolean;
+  exist_val: boolean;
+  exist_test:boolean;
 }
 
 // component
@@ -32,10 +34,12 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   projectSlug,
   currentScheme,
   dataset,
-  exist,
+  exist_val,
+  exist_test,
 }) => {
   // form management
   const datasetCleanForPrinting = dataset == 'test' ? 'Test' : 'Validation';
+  const exist = dataset === 'test' ? exist_test : exist_val;
   const { register, control, handleSubmit, setValue } = useForm<EvalSetModel & { files: FileList }>(
     {
       defaultValues: { scheme: currentScheme },
@@ -44,12 +48,11 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
 
   const createValidSet = useCreateValidSet(); // API call
   const { notify } = useNotifications();
-
   const dropEvalSet = useDropEvalSet(projectSlug); // API call to drop existing test set
   const navigate = useNavigate(); // for navigation after drop
 
   const [alertDrop, setAlertDrop] = useState<boolean>(false);
-
+  const [Processing,setProcessing]=useState<boolean>(false);
   const [data, setData] = useState<DataType | null>(null);
   const files = useWatch({ control, name: 'files' });
   // available columns
@@ -82,19 +85,34 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
         notify({ type: 'error', message: 'Please fill all the fields.' });
         return;
       }
+      try{
       const csv = data ? unparse(data.data, { header: true, columns: data.headers }) : '';
       formData.scheme = currentScheme;
-      await createValidSet(projectSlug, dataset, {
+      const sucess=await createValidSet(projectSlug, dataset, {
         ...omit(formData, 'files'),
         csv,
         filename: data.filename,
       });
+      if (sucess){
+        setProcessing(true);
+      }
+    }catch(error:any)
+    {
+      const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to create evaluation set';
+      notify({ type: 'error', message: errorMsg });
+      setProcessing(false);
+
     }
-  };
+    
+   
+  }
+};
+
 
   const capFirstLetter = (word: string) => {
     return word.charAt(0).toUpperCase() + word.slice(1);
   };
+
 
   return (
     <div>
@@ -112,7 +130,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
 
       {!exist && (
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="col-lg-6">
+          <div className="col-lg-6" >
             <div className="explanations">
               No {datasetCleanForPrinting} data set has been created. You can upload a{' '}
               {datasetCleanForPrinting} set. Careful : all features will be dropped and need to be
@@ -124,12 +142,13 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
             {
               // display datable if data available
               data !== null && (
-                <div>
+                <div style={{display:'flex', flexDirection:'column',minWidth: 0}} >
                   <div className="explanations">Preview</div>
                   <div>
                     Size of the dataset : <b>{data.data.length - 1}</b>
                   </div>
                   {/* TODO: AXEL if too many rows, the page expands and it messes everything */}
+                  <div style={{overflowX: 'scroll' ,minWidth:0}}>
                   <DataTable<Record<DataType['headers'][number], string | number>>
                     columns={data.headers.map((h) => ({
                       name: h,
@@ -139,11 +158,13 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                         return typeof v === 'bigint' ? Number(v) : v;
                       },
                       width: '200px',
+                      wrap:true,
                     }))}
                     data={
                       data.data.slice(0, 5) as Record<keyof DataType['headers'], string | number>[]
                     }
                   />
+                  </div>
                 </div>
               )
             }
@@ -187,10 +208,13 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                   </select>
                   <label htmlFor="n_test">Number of rows to import</label>
                   <input id="n_test" type="number" {...register('n_eval')} />
-
-                  <button type="submit" className="btn-submit">
+                  {Processing? ( 
+                    <div onClick={()=>{setProcessing(false);}}>
+                      <StopProcessButton projectSlug={projectSlug} kind={`add_evalset_${dataset}`}/>
+                    </div>
+                  ):(<button type="submit" className="btn-submit" >
                     Create
-                  </button>
+                  </button>)}
                 </div>
               )
             }
