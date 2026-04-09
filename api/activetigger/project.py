@@ -426,13 +426,16 @@ class Project:
         if dataset == "test":
             self.data.test = None
             self.params.test = False
+            self.params.n_test=0
         if dataset == "valid":
             self.data.valid = None
             self.params.valid = False
+            self.params.n_valid=0
         self.db_manager.projects_service.update_project(
             self.params.project_slug, jsonable_encoder(self.params)
         )
-
+        #Update Project's Data element 
+        self.data.load_dataset("all")
         # reset the features file
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
