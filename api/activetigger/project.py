@@ -533,10 +533,12 @@ class Project:
         if dataset == "test":
             df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.test_file))
             self.params.test = True
+            self.params.n_test=len(df)
             self.data.load_dataset("test")
         elif dataset == "valid":
             df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.valid_file))
             self.params.valid = True
+            self.params.n_valid=len(df)
             self.data.load_dataset("valid")
         else:
             raise Exception("Dataset should be test or valid")
