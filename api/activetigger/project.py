@@ -432,7 +432,11 @@ class Project:
         self.db_manager.projects_service.update_project(
             self.params.project_slug, jsonable_encoder(self.params)
         )
-
+        print(self.data.get_full_id().index)
+        print('train',self.data.train.index)
+        print('train ,self ',(self.data.get_full_id()["dataset"]=="train").index)
+        print(self.data.get_full_id().tail(10))
+        
         # reset the features file
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
@@ -507,14 +511,15 @@ class Project:
         full_index=self.data.get_full_id().index
         #strip "imported" prefix if already has other eval
         plain_full_index = {x.removeprefix("imported-") for x in full_index}
+        print(plain_full_index)
         overlapping_ids = set(df["id"]).intersection(set(plain_full_index))
         if overlapping_ids:
             #"c" for conflict
             df.loc[df["id"].isin(overlapping_ids), "id"] = [
-                'c'+str(i) for i in range(len(overlapping_ids))
-                ]
-            print(f"{len(overlapping_ids)} IDs in the eval set already exist in the main dataset")
-        # identify the dataset as imported and set the id
+                'cev_'+str(i) for i in range(len(overlapping_ids))
+            ]
+            print(f"{len(overlapping_ids)} IDs in the eval set already exist in the main dataset added cev pref")
+        #identify the dataset as imported and set the id
         df["id"] = df["id"].apply(lambda x: f"imported-{str(x)}")
         df = df.set_index("id")
 
@@ -559,10 +564,10 @@ class Project:
         # reset the features file
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
-
+        
         # reload the data
         self.data.load_dataset(dataset)
-
+        
     def train_quickmodel(
         self,
         quickmodel: QuickModelInModel,
