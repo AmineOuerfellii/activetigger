@@ -498,12 +498,22 @@ class Project:
             df["label"] = df["label"].apply(lambda x: str(x) if pd.notna(x) else None)
 
         # deal with non-unique id
-        # TODO : compare with the general dataset
+        
         df["id_external"] = df["id"].apply(str)
         if not ((df["id"].astype(str).apply(slugify)).nunique() == len(df)):
             df["id"] = [str(i) for i in range(len(df))]
             print("ID not unique, changed to default id")
-
+        #compare with the general dataset
+        full_index=self.data.get_full_id().index
+        #strip "imported" prefix if already has other eval
+        plain_full_index = {x.removeprefix("imported-") for x in full_index}
+        overlapping_ids = set(df["id"]).intersection(set(plain_full_index))
+        if overlapping_ids:
+            #"c" for conflict
+            df.loc[df["id"].isin(overlapping_ids), "id"] = [
+                'c'+str(i) for i in range(len(overlapping_ids))
+                ]
+            print(f"{len(overlapping_ids)} IDs in the eval set already exist in the main dataset")
         # identify the dataset as imported and set the id
         df["id"] = df["id"].apply(lambda x: f"imported-{str(x)}")
         df = df.set_index("id")
