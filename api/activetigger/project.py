@@ -436,9 +436,10 @@ class Project:
         )
         #Update Project's Data element 
         self.data.load_dataset("all")
-        # reset the features file
+        #reset the features file
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
+        
 
     def add_evalset(
         self, dataset, evalset: EvalSetDataModel, username: str, project_slug: str
@@ -501,6 +502,9 @@ class Project:
             df["label"] = df["label"].apply(lambda x: str(x) if pd.notna(x) else None)
 
         # deal with non-unique id
+        print(f"Full ids Dataframe length Before adding Evalset and \n after Drop previous set(after making the func updates n_val,n_test after removal) :{len(full_ids)}")
+        print(f"Supposed Current Length of Full ids:{self.params.n_train+self.params.n_valid+self.params.n_test}")
+        
         # TODO : compare with the general dataset
         df["id_external"] = df["id"].apply(str)
         if not ((df["id"].astype(str).apply(slugify)).nunique() == len(df)):
@@ -536,10 +540,12 @@ class Project:
         if dataset == "test":
             df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.test_file))
             self.params.test = True
+            self.params.n_test=len(df)
             self.data.load_dataset("test")
         elif dataset == "valid":
             df[["id_external", "text"]].to_parquet(self.params.dir.joinpath(config.valid_file))
             self.params.valid = True
+            self.params.n_valid=len(df)
             self.data.load_dataset("valid")
         else:
             raise Exception("Dataset should be test or valid")

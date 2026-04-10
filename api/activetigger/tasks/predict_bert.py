@@ -134,6 +134,7 @@ class PredictBertMultiClass(BaseTask):
             df["id_external"] = df[self.col_id_external]
             df["dataset"] = "all"
 
+
         return df
 
     def __write_progress(self, progress: float) -> None:
