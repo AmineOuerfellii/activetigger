@@ -52,8 +52,9 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   const dropEvalSet = useDropEvalSet(projectSlug); // API call to drop existing test set
   const navigate = useNavigate(); // for navigation after drop
 
+  const S_Key=`evalset-uploading_${dataset}`;
   const [alertDrop, setAlertDrop] = useState<boolean>(false);
-  const [Processing,setProcessing]=useState<boolean>(false);
+  const [processing,setProcessing]=useState<boolean>(() =>sessionStorage.getItem(S_Key) ==='true');
   const [data, setData] = useState<DataType | null>(null);
   const files = useWatch({ control, name: 'files' });
   // available columns
@@ -62,6 +63,12 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
       {h}
     </option>
   ));
+  const setUploadingPersisted = (val: boolean,dataset:string) => {
+    val
+      ? sessionStorage.setItem(S_Key, 'true')
+      : sessionStorage.removeItem(S_Key);
+      setProcessing(val);
+  };
 
   // convert paquet file in csv if needed when event on files
   useEffect(() => {
@@ -87,6 +94,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
         return;
       }
       try{
+      
       const csv = data ? unparse(data.data, { header: true, columns: data.headers }) : '';
       formData.scheme = currentScheme;
       const sucess=await createValidSet(projectSlug, dataset, {
@@ -95,17 +103,14 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
         filename: data.filename,
       });
       if (sucess){
-        setProcessing(true);
+        setUploadingPersisted(true,dataset);
       }
     }catch(error:any)
     {
       const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to create evaluation set';
       notify({ type: 'error', message: errorMsg });
-      setProcessing(false);
-
-    }
-    
-   
+      setUploadingPersisted(false,dataset);
+    }   
   }
 };
 
@@ -113,7 +118,6 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   const capFirstLetter = (word: string) => {
     return word.charAt(0).toUpperCase() + word.slice(1);
   };
-
 
   return (
     <div>
@@ -131,7 +135,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
 
       {!exist && (
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="col-lg-6" style={{maxWidth: '100%', overflowX: 'auto'}}>
+          <div className="col-lg-6">
             <div className="explanations">
               No {datasetCleanForPrinting} data set has been created. You can upload a{' '}
               {datasetCleanForPrinting} set. Careful : all features will be dropped and need to be
@@ -149,8 +153,13 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                     Size of the dataset : <b>{data.data.length - 1}</b>
                   </div>
                   {/* TODO: AXEL if too many rows, the page expands and it messes everything */}
-                  <style>{`.rdt_Table {display: block;overflow-x: auto;} .rdt_TableHeadRow, .rdt_TableRow { min-width: unset; } .rdt_TableCell, .rdt_TableCol { min-width: unset;`}</style>
                   <DataTable<Record<DataType['headers'][number], string | number>>
+                      customStyles={{responsiveWrapper: {
+                                    style: {
+                                      maxWidth: '600px',
+                                      overflowX: 'auto',},
+                                                  },
+                                              }}
                     columns={data.headers.map((h) => ({
                       name: h,
                       selector: (row) => row[h],
@@ -158,8 +167,8 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                         const v = row[h];
                         return typeof v === 'bigint' ? Number(v) : v;
                       },
-                      width:'200px',
-                      wrap:true,
+                      //width:'200px',
+                      //wrap:true,
                     }))}
                     data={
                       data.data.slice(0, 5) as Record<keyof DataType['headers'], string | number>[]
@@ -207,17 +216,18 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
                     {columns}
                   </select>
                   <label htmlFor="n_test">Number of rows to import</label>
-                  <input id="n_test" type="number" {...register('n_eval')} />
-                  {Processing? ( 
-                    <div onClick={()=>{setProcessing(false);setData(null);navigate(0)}}>
+                  <input id="n_test" type="number" {...register('n_eval')} />   
+                 </div>          
+              )}
+              {processing? ( 
+                    <div onClick={()=>{setUploadingPersisted(false,dataset);setData(null)}}>
                       <StopProcessButton projectSlug={projectSlug} kind={`add_evalset_${dataset}`}/>
                     </div>
-                  ):(<button type="submit" className="btn-submit" >
+                  ):(data != null && <button type="submit" className="btn-submit" >
                     Create
-                  </button>)}
-                </div>
-              )
-            }
+                </button>)}
+               
+            
           </div>
         </form>
       )}

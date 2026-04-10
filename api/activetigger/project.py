@@ -437,7 +437,6 @@ class Project:
         )
 
         #added reload datasets to avoid data leaks 
-        print(self.params.n_total)
         self.data.load_dataset(dataset="all")
         # reset the features file
         
@@ -507,7 +506,7 @@ class Project:
             )
             
         except Exception as e:
-            print("oo",e)
+            print(f"Error in adding the evaluation set{e}")
             raise e
         
     def train_quickmodel(
@@ -1724,29 +1723,23 @@ class Project:
                         self.bertopic.add(bertopic_model)
                         self.monitoring.close_process(bertopic_model.unique_id, events)
                     case str() as kind if kind.startswith("add_evalset_"):
-                        print("level 1")
                         e = cast(ProcessComputing, e)
-                        print("level 2")
                         if results is None:
                             print("No result from evalset addition")
                             raise Exception("No result from evalset addition")
                         else:
-                            print("level 3")
                             self.db_manager.projects_service.add_annotations(*results[0])
-                            print('level 4',*results[0])
-                            #print(f"{results[0][0]} labels imported")
                             #update the database with the new dataset info (test/valid + n_test/n_valid)
                             if results[1].test:
                                 self.params.test = results[1].test
                                 self.params.n_test = results[1].n_test
                             else:
                                 self.params.valid = results[1].valid
-                                self.params.n_valid = results[1].n_valid  # Amine: i kept this if the variable is used throught the app localy 
+                                self.params.n_valid = results[1].n_valid 
                             self.db_manager.projects_service.update_project(
                                 self.params.project_slug, jsonable_encoder(results[1])
                             )
                             #reset feature file and reload the dataset to be able to compute features on the new evalset
-                            print(results[0][0])
                             self.features.reset_features_file()
                             self.quickmodels.drop_models(which="all")
                             self.data.load_dataset(results[0][0])
