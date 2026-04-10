@@ -432,11 +432,8 @@ class Project:
         self.db_manager.projects_service.update_project(
             self.params.project_slug, jsonable_encoder(self.params)
         )
-        print(self.data.get_full_id().index)
-        print('train',self.data.train.index)
-        print('train ,self ',(self.data.get_full_id()["dataset"]=="train").index)
-        print(self.data.get_full_id().tail(10))
-        
+        #add reload
+        self.data.load_dataset("all")
         # reset the features file
         self.features.reset_features_file()
         self.quickmodels.drop_models(which="all")
