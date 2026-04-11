@@ -2,7 +2,6 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/activetigger/activetigger/blob/main/LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org/downloads/)
-[![PyPI Version](https://img.shields.io/pypi/v/activetigger)](https://pypi.org/project/activetigger/)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688)
 ![React](https://img.shields.io/badge/React-18.3-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6)
@@ -196,9 +195,6 @@ npm run build
 You can deploy the app with Github Pages for tests
 
 
-## Python client
-
-A python client is under development to interact with the API https://github.com/activetigger/activetigger-client
 
 ## Documentation
 
