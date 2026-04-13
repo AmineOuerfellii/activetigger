@@ -40,7 +40,8 @@ from activetigger.datamodels import (
     TokenModel,
     UserInDBModel,
 )
-from activetigger.orchestrator import orchestrator
+from activetigger.orchestrator import get_orchestrator
+from activetigger.config import config
 
 
 @asynccontextmanager
@@ -48,6 +49,8 @@ async def lifespan(app: FastAPI):
     """
     Frame the execution of the api
     """
+    orchestrator = get_orchestrator()
+    app.state.orchestrator = orchestrator
     print("Active Tigger starting")
     yield
     print("Active Tigger closing")
@@ -57,7 +60,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, root_path="/api")
 
 # setup file logger for fastapi events
-log_dir = Path(orchestrator.path).joinpath("logs")
+log_dir = Path(config.data_path) / "projects" / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
 log_file = log_dir.joinpath("fastapi_events.log")
 
@@ -116,7 +119,7 @@ async def log_requests(request: Request, call_next):
 
 
 # add static folder
-app.mount("/static", StaticFiles(directory=orchestrator.path.joinpath("static")), name="static")
+app.mount("/static", StaticFiles(directory=Path(config.data_path) / "projects" / "static"), name="static")
 
 # add routers
 app.include_router(users.router)
@@ -176,7 +179,7 @@ def restart_queue(
     """
     test_rights(ServerAction.MANAGE_SERVER, current_user.username)
     try:
-        orchestrator.reset()
+        get_orchestrator().reset()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -186,7 +189,7 @@ def get_queue() -> ServerStateModel:
     """
     Get the state of the server
     """
-    return orchestrator.server_state
+    return get_orchestrator().server_state
 
 
 @app.post("/token")
@@ -197,6 +200,7 @@ def login_for_access_token(
     Authentificate user from username/password and return token
     """
     try:
+        orchestrator = get_orchestrator()
         user = orchestrator.users.authenticate_user(form_data.username, form_data.password)
         access_token = orchestrator.create_access_token(
             data={"sub": user.username}, expires_min=120
@@ -219,7 +223,7 @@ def get_logs(
         test_rights(ServerAction.MANAGE_SERVER, current_user.username)
     else:
         test_rights(ProjectAction.GET, current_user.username, project_slug)
-    df = orchestrator.get_logs(project_slug, limit)
+    df = get_orchestrator().get_logs(project_slug, limit)
     return TableOutModel(
         items=df.to_dict(orient="records"),
         total=limit,
@@ -241,6 +245,7 @@ def stop_process(
     if unique_id is None and kind is None:
         raise HTTPException(status_code=400, detail="You must provide a unique_id or a kind")
     try:
+        orchestrator = get_orchestrator()
         if unique_id is not None:
             test_rights(ServerAction.MANAGE_SERVER, current_user.username)
             orchestrator.stop_process(unique_id, current_user.username)

@@ -24,7 +24,7 @@ from activetigger.config import config
 from activetigger.datamodels import (
     UserInDBModel,
 )
-from activetigger.orchestrator import orchestrator
+from activetigger.orchestrator import get_orchestrator
 from activetigger.project import Project
 
 router = APIRouter(tags=["files"])
@@ -41,7 +41,8 @@ def upload_file_project(
     use: type de file
     """
     test_rights(ServerAction.CREATE_PROJECT, current_user.username)
-
+    orchestrator = get_orchestrator()
+    
     # add a delay if projects are already being created
     if len(orchestrator.project_creation_ongoing) >= 3:
         time.sleep(random.randint(1, 4))
@@ -122,6 +123,8 @@ def copy_existing_data(
     if copy from project: orchestrator.path/NAME/data_all.parquet
     """
     test_rights(ServerAction.CREATE_PROJECT, current_user.username)
+
+    orchestrator = get_orchestrator()
 
     # check if the project does not already exist
     if orchestrator.exists(project_name):

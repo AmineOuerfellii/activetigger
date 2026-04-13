@@ -608,5 +608,10 @@ class Orchestrator:
         return toy_datasets
 
 
-# launch the instance
-orchestrator = Orchestrator()
+orchestrator = None
+
+def get_orchestrator():
+    global orchestrator
+    if orchestrator is None:
+        orchestrator = Orchestrator()
+    return orchestrator
