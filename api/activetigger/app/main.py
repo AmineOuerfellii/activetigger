@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
 
 
 # starting the app
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, root_path="/api")
 
 # setup file logger for fastapi events
 log_dir = Path(orchestrator.path).joinpath("logs")
