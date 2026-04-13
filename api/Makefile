@@ -1,0 +1,20 @@
+.PHONY: install
+install:
+	uv sync
+
+.PHONY: lint
+lint:
+	uv run ruff check .
+
+.PHONY: format
+format:
+	uv run ruff format . --check
+
+.PHONY: format-fix
+format-fix:
+	uv run ruff format .
+
+.PHONY: typecheck
+typecheck:
+	uv run mypy .
+

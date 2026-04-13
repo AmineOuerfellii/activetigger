@@ -119,12 +119,14 @@ exclude = ["migrations/"]
 
 [tool.mypy]
 python_version = "3.11"
+exclude = ["migrations/"]
 files = [
 	"activetigger/db/*.py", # Add files each time one is cleaned
 	"activetigger/generation/*.py",
 	"activetigger/projections.py"
 ]
 incremental = true
+
 
 [tool.uv]
 environments = [
