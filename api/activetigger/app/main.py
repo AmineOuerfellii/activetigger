@@ -119,7 +119,9 @@ async def log_requests(request: Request, call_next):
 
 
 # add static folder
-app.mount("/static", StaticFiles(directory=Path(config.data_path) / "projects" / "static"), name="static")
+app.mount(
+    "/static", StaticFiles(directory=Path(config.data_path) / "projects" / "static"), name="static"
+)
 
 # add routers
 app.include_router(users.router)

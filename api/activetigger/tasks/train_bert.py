@@ -112,9 +112,7 @@ class CustomTrainer(Trainer):
         self.class_weights = class_weights
         print("CustomTrainer initialized with class weights:", self.class_weights)
 
-    def compute_loss(
-        self, model, inputs, return_outputs=False, **kwargs
-    ):  # ty: ignore[invalid-method-override]
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):  # ty: ignore[invalid-method-override]
         labels = inputs.get("labels")
         outputs = model(**inputs)
         logits = outputs.get("logits")
@@ -573,9 +571,7 @@ class TrainBert(BaseTask):
                 self.ds["train"].to_pandas().set_index("id")  # ty: ignore[unresolved-attribute]
             )
 
-            df_train_results["true_label-matrix"] = (
-                predictions_train.label_ids.tolist()  # ty: ignore[unresolved-attribute]
-            )
+            df_train_results["true_label-matrix"] = predictions_train.label_ids.tolist()  # ty: ignore[unresolved-attribute]
             df_train_results["true_label"] = [
                 "|".join(matrix_to_label(row, id2label))  # ty: ignore[invalid-argument-type]
                 for row in predictions_train.label_ids  # ty: ignore[not-iterable]
@@ -629,9 +625,7 @@ class TrainBert(BaseTask):
                     self.ds["test"].to_pandas().set_index("id")  # ty: ignore[unresolved-attribute]
                 )
 
-                df_test_results["true_label-matrix"] = (
-                    predictions_test.label_ids.tolist()  # ty: ignore[unresolved-attribute]
-                )
+                df_test_results["true_label-matrix"] = predictions_test.label_ids.tolist()  # ty: ignore[unresolved-attribute]
                 df_test_results["true_label"] = [
                     "|".join(matrix_to_label(row, id2label))  # ty: ignore[invalid-argument-type]
                     for row in predictions_test.label_ids  # ty: ignore[not-iterable]

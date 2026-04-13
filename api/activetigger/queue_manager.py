@@ -236,7 +236,8 @@ class Queue:
         self.current = [
             i
             for i in self.current
-            if (datetime.datetime.now(timezone.utc) - i.starting_time).total_seconds() / 3600 < timeout
+            if (datetime.datetime.now(timezone.utc) - i.starting_time).total_seconds() / 3600
+            < timeout
         ]
         if n != len(self.current):
             print(f"Cleaned {n - len(self.current)} processes")

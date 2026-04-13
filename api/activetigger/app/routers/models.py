@@ -58,7 +58,9 @@ def retrain_quickmodel(
     test_rights(ProjectAction.GET, current_user.username, project.name)
     try:
         project.retrain_quickmodel(name, scheme, current_user.username)
-        get_orchestrator().log_action(current_user.username, f"RETRAIN SIMPLE MODEL {name}", project.name)
+        get_orchestrator().log_action(
+            current_user.username, f"RETRAIN SIMPLE MODEL {name}", project.name
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

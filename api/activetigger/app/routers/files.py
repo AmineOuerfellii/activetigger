@@ -42,7 +42,7 @@ def upload_file_project(
     """
     test_rights(ServerAction.CREATE_PROJECT, current_user.username)
     orchestrator = get_orchestrator()
-    
+
     # add a delay if projects are already being created
     if len(orchestrator.project_creation_ongoing) >= 3:
         time.sleep(random.randint(1, 4))

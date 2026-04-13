@@ -78,7 +78,9 @@ def delete_feature(
     test_rights(ProjectAction.DELETE, current_user.username, project.name)
     try:
         project.features.delete(name)
-        get_orchestrator().log_action(current_user.username, f"DELETE FEATURE: {name}", project.name)
+        get_orchestrator().log_action(
+            current_user.username, f"DELETE FEATURE: {name}", project.name
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

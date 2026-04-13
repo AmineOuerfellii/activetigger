@@ -36,7 +36,7 @@ async def get_project(project_slug: str) -> Project:
     - if not loaded, load it first (in a thread to avoid blocking the event loop)
     """
     orchestrator = get_orchestrator()
-    
+
     # test if project exists
     if not orchestrator.exists(project_slug):
         raise HTTPException(status_code=404, detail="Project not found")
