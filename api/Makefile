@@ -16,7 +16,7 @@ format-fix:
 
 .PHONY: typecheck
 typecheck:
-	uv run mypy .
+	uv run ty check .
 
 .PHONY: test
 test:

@@ -8,7 +8,7 @@ from fastapi import (
     Request,
 )
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError  # type: ignore[import]
+from jose import JWTError
 
 from activetigger.datamodels import (
     UserInDBModel,

@@ -77,8 +77,8 @@ def upload_file_project(
 
     except Exception as e:
         # if failed, remove the project folder
-        if project_path.exists():
-            shutil.rmtree(project_path)
+        if project_path.exists():  # ty: ignore[possibly-unresolved-reference]
+            shutil.rmtree(project_path)  # ty: ignore[possibly-unresolved-reference]
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -150,6 +150,6 @@ def copy_existing_data(
 
     except Exception as e:
         # if failed, remove the project folder
-        if project_path.exists():
-            shutil.rmtree(project_path)
+        if project_path.exists():  # ty: ignore[possibly-unresolved-reference]
+            shutil.rmtree(project_path)  # ty: ignore[possibly-unresolved-reference]
         raise HTTPException(status_code=500, detail=str(e))

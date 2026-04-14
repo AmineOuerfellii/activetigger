@@ -8,10 +8,10 @@ from datetime import timezone
 from pathlib import Path
 
 import numpy as np
-import pandas as pd  # type: ignore[import]
-from scipy.stats import entropy  # type: ignore[import]
-from sklearn.base import BaseEstimator  # type: ignore[import]
-from sklearn.model_selection import (  # type: ignore[import]
+import pandas as pd
+from scipy.stats import entropy
+from sklearn.base import BaseEstimator
+from sklearn.model_selection import (
     KFold,
     cross_val_predict,
 )
