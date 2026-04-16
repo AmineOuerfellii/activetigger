@@ -177,7 +177,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
     return () => {
       n_cancel.signal.removeEventListener('abort', stop);
     };
-  // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-line react-hooks/exhaustive-deps
   }, [cancel, uploading]);
 
   // available columns

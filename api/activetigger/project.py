@@ -468,7 +468,7 @@ class Project:
                         for t in self.queue.current
                         if t.kind == "add_evalset"
                         and t.project_slug == project_slug
-                        and t.task.dataset == dataset # type: ignore
+                        and t.task.dataset == dataset  # type: ignore
                     ),
                     None,
                 )
