@@ -97,7 +97,8 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   //sync uploadref with state
   useEffect(() => {
     uploadingRef.current = uploading;
-  }, [uploading]);// eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploading]);
 
   //case set exist :
   console.log(dataset, exist);
@@ -176,6 +177,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
     return () => {
       n_cancel.signal.removeEventListener('abort', stop);
     };
+  // eslint-disable-line react-hooks/exhaustive-deps
   }, [cancel, uploading]);
 
   // available columns
