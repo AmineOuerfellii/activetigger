@@ -75,12 +75,12 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   const maxDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   //no old error that may block the workflow
-  console.log("proj", proj_errors)
+
 
   //handle uploading
   const isUploading = useCallback((val: boolean) => {
     console.trace('isUploading', val);
-    if (!val) { cancelRef.current = undefined; errorCountAtSubmit.current = 0; }
+    if (!val) { cancelRef.current = undefined; }
     val ? sessionStorage.setItem(add_eval_storageKey, 'true') : sessionStorage.removeItem(add_eval_storageKey);
     setUploading(val);
   }, [add_eval_storageKey]);
@@ -90,6 +90,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
 
   //case set exist :
   console.log(dataset, exist);
+
   useEffect(() => {
     if (exist && uploadingRef.current) {
       isUploading(false);
@@ -99,12 +100,15 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   //Error Management : handle errors from backend
   useEffect(() => {
     if (!uploading) return;
-    const newErrors = proj_errors.slice(errorCountAtSubmit.current);
-    const evalsetError = [...newErrors].reverse().find((e) => Array.isArray(e) && (e[0] as string).includes(`add_evalset_${dataset}`));
-    if (evalsetError) {
-      notify({ type: 'error', message: (evalsetError as string[]).join('-') });
-      isUploading(false);
-      setTimeout(() => { navigate(0); }, 750);
+    const len_new_errors = proj_errors.length - errorCountAtSubmit.current;
+    if (len_new_errors > 0) {
+      const newErrors = proj_errors.slice(-len_new_errors);
+      const evalsetError = [...newErrors].reverse().find((e) => Array.isArray(e) && (e[0] as string).includes(`add_evalset_${dataset}`));
+      if (evalsetError) {
+        notify({ type: 'error', message: (evalsetError as string[]).join('-') });
+        isUploading(false);
+        //setTimeout(() => { navigate(0); }, 750);
+      }
     }
   }, [proj_errors, uploading]);
 

@@ -453,8 +453,10 @@ class Project:
             evalset.col_label = None
         if dataset not in ["test", "valid"]:
             raise Exception("Dataset should be test or valid")
+        
         if dataset == "test" and self.params.test:
             raise Exception("There is already a test dataset")
+        
         if dataset == "valid" and self.params.valid:
             raise Exception("There is already a valid dataset")
         try:

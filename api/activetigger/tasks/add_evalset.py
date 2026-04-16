@@ -54,7 +54,7 @@ class AddEvalSet(BaseTask):
             #added a check if DF is empty to avoid errors 
             if len(df) == 0:
                 raise Exception("Your valid set is empty")
-            
+            print("df cols",df.columns,flush=True)
             #stop Process
             self.__stop_process_opportunity()
             # create text column
@@ -64,13 +64,15 @@ class AddEvalSet(BaseTask):
             if not self.evalset.col_label:
                 df = df.rename(columns={self.evalset.col_id: "id"})
             else:
+                if "label" in df.columns and self.evalset.col_label != "label":
+                    df = df.rename(columns={"label": "_label_"})
                 df = df.rename(
                     columns={
                         self.evalset.col_id: "id",
                         self.evalset.col_label: "label",
                     }
                 )
-                df["label"] = df["label"].apply(lambda x: str(x) if pd.notna(x) else None)
+                df["label"]=df["label"].apply(lambda x: None if pd.isna(x) else str(x))
             # deal with non-unique id
             df["id_external"] = df["id"].apply(str)
             if not ((df["id"].astype(str).apply(slugify)).nunique() == len(df)):
@@ -80,7 +82,7 @@ class AddEvalSet(BaseTask):
             #                    ============================================ 
             plain_full_index = {x.removeprefix("imported-") for x in self.index_all}  
             overlapping_ids = set(df["id"]).intersection(set(plain_full_index))
-            if overlapping_ids:
+            if overlapping_ids and len(overlapping_ids) > 0:
                 df.loc[df["id"].isin(overlapping_ids), "id"] = [
                     'c-ev-'+str(i) for i in range(len(overlapping_ids))
                     ]
