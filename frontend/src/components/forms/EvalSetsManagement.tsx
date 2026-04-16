@@ -107,7 +107,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
     if (exist && uploadingRef.current) {
       isUploading(false);
     }
-  }, [exist]);
+  }, [exist]); // eslint-disable-line react-hooks/exhaustive-deps
 
   //Error Management : handle errors from backend
   useEffect(() => {
@@ -177,7 +177,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
     return () => {
       n_cancel.signal.removeEventListener('abort', stop);
     };
-    // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cancel, uploading]);
 
   // available columns
