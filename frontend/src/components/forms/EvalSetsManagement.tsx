@@ -97,7 +97,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
   //sync uploadref with state
   useEffect(() => {
     uploadingRef.current = uploading;
-  }, [uploading]);
+  }, [uploading]);// eslint-disable-line react-hooks/exhaustive-deps
 
   //case set exist :
   console.log(dataset, exist);
@@ -123,6 +123,7 @@ export const EvalSetsManagement: FC<EvalSetsManagementModel> = ({
         //setTimeout(() => { navigate(0); }, 750);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proj_errors, uploading]);
 
   //handle Timeout :if task surpasses 5 minutes (Case of server resrtart or shut down)
