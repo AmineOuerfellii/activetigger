@@ -1979,12 +1979,13 @@ export function useGenerate(
   n_batch: number | null,
   prompt: string | null,
   mode: string | null,
+  dataset: string | null,
   token?: string,
   promptName?: string,
 ) {
   const { notify } = useNotifications();
   const generate = useCallback(async () => {
-    if (projectSlug && modelId && prompt && n_batch && currentScheme && mode) {
+    if (projectSlug && modelId && prompt && n_batch && currentScheme && mode && dataset) {
       const res = await api.POST('/generate/start', {
         params: {
           query: {
@@ -1998,6 +1999,7 @@ export function useGenerate(
           token: token,
           scheme: currentScheme,
           mode: mode,
+          dataset: dataset,
           prompt_name: promptName,
         },
       });
@@ -2005,7 +2007,7 @@ export function useGenerate(
       return true;
     }
     return null;
-  }, [projectSlug, modelId, prompt, n_batch, currentScheme, mode, token, notify, promptName]);
+  }, [projectSlug, modelId, prompt, n_batch, currentScheme, mode, dataset, token, notify, promptName]);
 
   return { generate };
 }

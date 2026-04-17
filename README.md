@@ -73,7 +73,7 @@ git clone https://github.com/activetigger/activetigger.git
 
 We recommend using [uv](https://docs.astral.sh/uv/), a fast Python package and project manager written in Rust. It replaces `pip`, `venv`, and `conda` in a single tool and automatically handles Python version management, virtual environments, and dependency resolution — making setup faster and more reliable.
 
-Install uv on macOS / Linux:
+Install `uv` on macOS / Linux:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh

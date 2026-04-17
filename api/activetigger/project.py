@@ -485,9 +485,7 @@ class Project:
                 username=username,
                 index=self.data.get_full_id().index,
                 project_slug=project_slug,
-                scheme=self.schemes.available()[evalset.scheme].labels
-                if evalset.scheme
-                else None,
+                scheme=self.schemes.available()[evalset.scheme].labels if evalset.scheme else None,
             ),
             queue="cpu",
         )
@@ -1546,7 +1544,9 @@ class Project:
         """
         Start a generation process
         """
-        extract = self.schemes.get_sample(request.scheme, request.n_batch, request.mode)
+        extract = self.schemes.get_sample(
+            request.scheme, request.n_batch, request.mode, dataset=request.dataset
+        )
         if len(extract) == 0:
             raise Exception("No elements available for generation")
         model = self.generations.generations_service.get_gen_model(request.model_id)
@@ -1572,6 +1572,7 @@ class Project:
                 project=self.name,
                 model_id=request.model_id,
                 number=request.n_batch,
+                dataset=request.dataset,
                 time=datetime.now(timezone.utc),
                 kind="generation",
                 get_progress=GenerateCall.get_progress_callback(
@@ -1707,7 +1708,7 @@ class Project:
                             list[GenerationResult],
                             results,
                         )
-                        batch = str(e.prompt_name) + "_" + e.unique_id
+                        batch = e.dataset + "_" + str(e.prompt_name) + "_" + e.unique_id
                         for row in r:
                             self.generations.add(
                                 user=row.user,
