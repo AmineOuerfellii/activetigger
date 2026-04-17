@@ -105,9 +105,7 @@ def create_project(
     return response_project.json()["params"]
 
 
-def delete_project(
-    client: TestClient, superuser_header: dict[str, str], project_slug: str
-) -> None:
+def delete_project(client: TestClient, superuser_header: dict[str, str], project_slug: str) -> None:
     """
     Helper function to delete a project.
     """
