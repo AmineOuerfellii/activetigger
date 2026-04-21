@@ -224,7 +224,7 @@ class CreateProject(BaseTask):
             and self.params.n_valid == 0
         ):
             trainset = content[0 : self.params.n_train]
-        # case to force the max of label from one column
+        # case to force the max of label from all label columns
         elif self.params.force_label and len(self.params.cols_label) > 0:
             f_notna = content[content[self.params.cols_label].notna().any(axis=1)]
             f_na =content[content[self.params.cols_label].isna().all(axis=1)]
