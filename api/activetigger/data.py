@@ -155,7 +155,7 @@ class Data:
         """
         Get the full list of IDs from the raw file
         """
-        if self.index is None:
+        if self.index.empty:
             self.index = pd.read_parquet(self.path_data_all, columns=["id_external"])
         return self.index
 
