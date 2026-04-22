@@ -104,7 +104,6 @@ class Queue:
         ):
             #self.executor = get_reusable_executor(max_workers=(self.nb_workers), timeout=600)
             task_cpu[0].future = self.executor.submit(task_cpu[0].task)
-            print(self.executor.executor_id)
             task_cpu[0].state = "running"
     
     async def _update_queue(self, timeout: float = 1) -> None:
@@ -162,6 +161,8 @@ class Queue:
         element = [i for i in self.current if i.unique_id == unique_id]
         if len(element) == 0:
             return None
+        if element[0].future and element[0].future.done():
+            element[0].state = "done"
         return element[0]
 
     def kill(self, unique_id: str) -> None:
