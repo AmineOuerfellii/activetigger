@@ -1108,7 +1108,7 @@ class PromptModel(BaseModel):
 
 class TextDatasetModel(BaseModel):
     id: str
-    text: str
+    cols_text: list[str]
     filename: str
     path: Path | None = None
 

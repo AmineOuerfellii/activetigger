@@ -305,6 +305,7 @@ class LanguageModels:
         statistics: list | None = None,
         path_data: Path | None = None,
         external_dataset: None | TextDatasetModel = None,
+        dataset_index: DataFrame | None = None,
     ) -> None:
         """
         Start predicting process
@@ -338,6 +339,7 @@ class LanguageModels:
                 statistics=statistics,
                 path_data=path_data,
                 external_dataset=external_dataset,
+                dataset_index=dataset_index,
             ),
             queue="gpu",
         )
@@ -400,9 +402,12 @@ class LanguageModels:
         out_path = self.path.joinpath(name).joinpath(out_name)
         if not out_path.exists() or out_path.stat().st_mtime < path.stat().st_mtime:
             df = pd.read_parquet(path)
-            # rename id_external to original column name for consistency with other exports
+            # rename id_external to original column name (without dataset_ prefix)
+            # and move it to the first position for consistency with other exports
             if col_id is not None and "id_external" in df.columns:
-                df.rename(columns={"id_external": col_id}, inplace=True)
+                clean_col_id = col_id.removeprefix("dataset_")
+                df.rename(columns={"id_external": clean_col_id}, inplace=True)
+                df = df[[clean_col_id] + [c for c in df.columns if c != clean_col_id]]
             if format == "csv":
                 df.to_csv(out_path, index=False)
             else:

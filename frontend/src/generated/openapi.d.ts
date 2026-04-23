@@ -3594,8 +3594,8 @@ export interface components {
         TextDatasetModel: {
             /** Id */
             id: string;
-            /** Text */
-            text: string;
+            /** Cols Text */
+            cols_text: string[];
             /** Filename */
             filename: string;
             /** Path */
