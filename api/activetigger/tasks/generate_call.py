@@ -100,67 +100,73 @@ class GenerateCall(BaseTask):
         results: list[GenerationResult] = []
         batch = f"{self.dataset}_{self.prompt_name}_{self.unique_id}"
         last_flushed = 0
+        progress_path = self.path_process.joinpath(self.unique_id)
 
-        # loop on all elements
-        # TODO: Why not give all the data in one go?
-        c = 0
-        self._write_progress(0)
-        for _index, row in self.df.iterrows():
-            # test for interruption
-            if self.event is not None:
-                if self.event.is_set():
-                    if len(results) > last_flushed:
-                        self._flush_to_jsonl(results[last_flushed:], batch)
-                    raise Exception("Process was interrupted")
+        try:
+            # loop on all elements
+            # TODO: Why not give all the data in one go?
+            c = 0
+            self._write_progress(0)
+            for _index, row in self.df.iterrows():
+                # test for interruption
+                if self.event is not None:
+                    if self.event.is_set():
+                        if len(results) > last_flushed:
+                            self._flush_to_jsonl(results[last_flushed:], batch)
+                        raise Exception("Process was interrupted")
 
-            prompt_with_text = self.__replace_tags_with_text(row, self.prompt, self.cols_context)
-
-            # Get configured model
-
-            # make request to the client
-            gen_model: GenerationModelClient
-            if self.model.api == "Ollama":
-                if self.model.endpoint is None:
-                    raise Exception("You need to give an endpoint for the Ollama model")
-                gen_model = Ollama(self.model.endpoint)
-            elif self.model.api == "OpenAI":
-                if self.model.credentials is None:
-                    raise Exception("You need to give your API key to call an OpenAI model")
-                gen_model = OpenAI(self.model.credentials)
-            elif self.model.api == "HuggingFace":
-                gen_model = HuggingFace(
-                    credentials=self.model.credentials, endpoint=self.model.endpoint
+                prompt_with_text = self.__replace_tags_with_text(
+                    row, self.prompt, self.cols_context
                 )
-            elif self.model.api == "OpenRouter":
-                gen_model = OpenRouter(credentials=self.model.credentials)
-            elif self.model.api == "ilaas":
-                gen_model = OpenAPI(
-                    endpoint="https://llm.ilaas.fr/v1/chat/completions",
-                    credentials=self.model.credentials,
+
+                # Get configured model
+
+                # make request to the client
+                gen_model: GenerationModelClient
+                if self.model.api == "Ollama":
+                    if self.model.endpoint is None:
+                        raise Exception("You need to give an endpoint for the Ollama model")
+                    gen_model = Ollama(self.model.endpoint)
+                elif self.model.api == "OpenAI":
+                    if self.model.credentials is None:
+                        raise Exception("You need to give your API key to call an OpenAI model")
+                    gen_model = OpenAI(self.model.credentials)
+                elif self.model.api == "HuggingFace":
+                    gen_model = HuggingFace(
+                        credentials=self.model.credentials, endpoint=self.model.endpoint
+                    )
+                elif self.model.api == "OpenRouter":
+                    gen_model = OpenRouter(credentials=self.model.credentials)
+                elif self.model.api == "ilaas":
+                    gen_model = OpenAPI(
+                        endpoint="https://llm.ilaas.fr/v1/chat/completions",
+                        credentials=self.model.credentials,
+                    )
+                else:
+                    errors.append(Exception("Model does not exist"))
+                    continue
+
+                response = gen_model.generate(prompt_with_text, self.model.slug)
+                results.append(
+                    GenerationResult(
+                        user=self.username,
+                        project_slug=self.project_slug,
+                        model_id=self.model.id,
+                        element_id=str(_index),
+                        prompt=prompt_with_text,
+                        answer=response,
+                    )
                 )
-            else:
-                errors.append(Exception("Model does not exist"))
-                continue
+                self._write_progress(int((c / len(self.df)) * 100))
+                c += 1
 
-            response = gen_model.generate(prompt_with_text, self.model.slug)
-            results.append(
-                GenerationResult(
-                    user=self.username,
-                    project_slug=self.project_slug,
-                    model_id=self.model.id,
-                    element_id=str(_index),
-                    prompt=prompt_with_text,
-                    answer=response,
-                )
-            )
-            self._write_progress(int((c / len(self.df)) * 100))
-            c += 1
+                if c - last_flushed >= FLUSH_EVERY:
+                    self._flush_to_jsonl(results[last_flushed:c], batch)
+                    last_flushed = c
 
-            if c - last_flushed >= FLUSH_EVERY:
-                self._flush_to_jsonl(results[last_flushed:c], batch)
-                last_flushed = c
-
-        return results
+            return results
+        finally:
+            progress_path.unlink(missing_ok=True)
 
     def __replace_tags_with_text(self, row: Series, prompt: str, context_columns: list[str]) -> str:
         """This function takes in the prompt with tags (eg: "Hello please insert
