@@ -2007,7 +2007,18 @@ export function useGenerate(
       return true;
     }
     return null;
-  }, [projectSlug, modelId, prompt, n_batch, currentScheme, mode, dataset, token, notify, promptName]);
+  }, [
+    projectSlug,
+    modelId,
+    prompt,
+    n_batch,
+    currentScheme,
+    mode,
+    dataset,
+    token,
+    notify,
+    promptName,
+  ]);
 
   return { generate };
 }
