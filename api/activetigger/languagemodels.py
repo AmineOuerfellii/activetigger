@@ -113,6 +113,7 @@ class LanguageModels:
                 predicted_external=m.parameters.get("predicted_external", False),
                 name=m.name,
                 time=m.time,
+                exclude_labels=m.parameters.get("exclude_labels", []),
             )
         return r
 
@@ -200,6 +201,7 @@ class LanguageModels:
         auto_max_length: bool = False,
         class_balance: bool = False,
         class_min_freq: int = 1,
+        exclude_labels: list[str] | None = None,
     ) -> str:
         """
         Manage the training of a model from the API
@@ -258,7 +260,9 @@ class LanguageModels:
         del df
 
         # add flags in params
-        params = LMParametersDbModel(**params.model_dump())
+        params = LMParametersDbModel(
+            **params.model_dump(), exclude_labels=exclude_labels or []
+        )
 
         # Update the queue state
         self.computing.append(

@@ -2657,6 +2657,8 @@ export interface components {
             name: string;
             /** Time */
             time: string;
+            /** Exclude Labels */
+            exclude_labels: string[];
         };
         /** LanguageModelsProjectStateModel */
         LanguageModelsProjectStateModel: {

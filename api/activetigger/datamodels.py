@@ -322,6 +322,7 @@ class LMParametersModelTrained(LMParametersModel):
 class LMParametersDbModel(LMParametersModel):
     predicted: bool = False
     compressed: bool = False
+    exclude_labels: list[str] = []
 
 
 class LMStatusModel(BaseModel):
@@ -331,6 +332,7 @@ class LMStatusModel(BaseModel):
     predicted_external: bool = False
     name: str
     time: str
+    exclude_labels: list[str] = []
 
 
 class BertModelModel(BaseModel):

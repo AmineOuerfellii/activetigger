@@ -1484,6 +1484,7 @@ class Project:
             class_min_freq=bert.class_min_freq,
             use_dichotomization=use_dichotomization,
             label_for_dichotomization=bert.dichotomize if use_dichotomization else None,
+            exclude_labels=bert.exclude_labels,
         )
         self.monitoring.register_process(
             process_name=process_id,
