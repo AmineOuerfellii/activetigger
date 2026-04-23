@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from pandas import DataFrame, Series
@@ -13,6 +14,10 @@ from activetigger.generation.openai import OpenAI
 from activetigger.generation.openapi import OpenAPI
 from activetigger.generation.openrouter import OpenRouter
 from activetigger.tasks.base_task import BaseTask
+
+# Flush in-memory results to a recovery file every N rows so a crash loses at
+# most FLUSH_EVERY - 1 paid generations instead of the whole batch.
+FLUSH_EVERY = 10
 
 
 class GenerateCall(BaseTask):
@@ -31,6 +36,8 @@ class GenerateCall(BaseTask):
         model: GenerationModel,
         prompt: str,
         cols_context: list[str],
+        dataset: str,
+        prompt_name: str,
     ):
         super().__init__()
         if path_process is None:
@@ -42,6 +49,8 @@ class GenerateCall(BaseTask):
         self.model = model
         self.prompt = prompt
         self.cols_context = cols_context
+        self.dataset = dataset
+        self.prompt_name = prompt_name
 
     def _write_progress(self, progress: int):
         """
@@ -50,6 +59,16 @@ class GenerateCall(BaseTask):
         with open(self.path_process.joinpath(self.unique_id), "w") as f:
             f.write(f"{progress}")
         print(f"Progress: {progress}")
+
+    def _jsonl_path(self) -> Path:
+        return self.path_process.joinpath(f"gen_{self.unique_id}.jsonl")
+
+    def _flush_to_jsonl(self, chunk: list[GenerationResult], batch: str) -> None:
+        with open(self._jsonl_path(), "a") as f:
+            for r in chunk:
+                payload = r.model_dump()
+                payload["batch"] = batch
+                f.write(json.dumps(payload) + "\n")
 
     @staticmethod
     def get_progress_callback(path_file):
@@ -79,6 +98,8 @@ class GenerateCall(BaseTask):
         # errors
         errors: list[Exception] = []
         results: list[GenerationResult] = []
+        batch = f"{self.dataset}_{self.prompt_name}_{self.unique_id}"
+        last_flushed = 0
 
         # loop on all elements
         # TODO: Why not give all the data in one go?
@@ -88,6 +109,8 @@ class GenerateCall(BaseTask):
             # test for interruption
             if self.event is not None:
                 if self.event.is_set():
+                    if len(results) > last_flushed:
+                        self._flush_to_jsonl(results[last_flushed:], batch)
                     raise Exception("Process was interrupted")
 
             prompt_with_text = self.__replace_tags_with_text(row, self.prompt, self.cols_context)
@@ -132,6 +155,10 @@ class GenerateCall(BaseTask):
             )
             self._write_progress(int((c / len(self.df)) * 100))
             c += 1
+
+            if c - last_flushed >= FLUSH_EVERY:
+                self._flush_to_jsonl(results[last_flushed:c], batch)
+                last_flushed = c
 
         return results
 

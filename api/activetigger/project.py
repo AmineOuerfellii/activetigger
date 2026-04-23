@@ -248,6 +248,13 @@ class Project:
             self.db_manager,
         )
 
+        # Persist any generation checkpoints left behind by a crashed worker or
+        # a previous server restart. At load time self.computing is empty, so
+        # every gen_*.jsonl file in the project dir is an orphan.
+        if self.params.dir is not None:
+            for jsonl_path in self.params.dir.glob("gen_*.jsonl"):
+                self._recover_generations_from_jsonl(jsonl_path)
+
     def start_project_creation(self, params: ProjectBaseModel, username: str, path: Path) -> None:
         """
         Manage process creation, sending the heavy process to the queue
@@ -869,7 +876,9 @@ class Project:
                 raise Exception("Train dataset is not defined")
             # get context for the single selected element
             context = dict(
-                self.data.train.loc[element_id, self.params.cols_context].fillna("NA").apply(str)  # ty: ignore[possibly-unresolved-reference]
+                self.data.train.loc[element_id, self.params.cols_context]
+                .fillna("NA")
+                .apply(str)  # ty: ignore[possibly-unresolved-reference]
             )
 
         text = df.loc[element_id, "text"]  # ty: ignore[possibly-unresolved-reference]
@@ -953,7 +962,9 @@ class Project:
             # extract context
             context = cast(
                 dict[str, Any],
-                self.data.train.loc[element.element_id, self.params.cols_context]  # ty: ignore[invalid-argument-type]
+                self.data.train.loc[
+                    element.element_id, self.params.cols_context
+                ]  # ty: ignore[invalid-argument-type]
                 .fillna("NA")
                 .astype(str)
                 .to_dict(),
@@ -1564,6 +1575,8 @@ class Project:
                 prompt=request.prompt,
                 model=GenerationModel(**model.__dict__),
                 cols_context=self.params.cols_context,
+                dataset=request.dataset,
+                prompt_name=request.prompt_name if request.prompt_name else "",
             ),
         )
         self.computing.append(
@@ -1589,6 +1602,37 @@ class Project:
         """
         self.computing.remove(e)
         self.queue.delete(e.unique_id)
+
+    def _recover_generations_from_jsonl(self, path: Path) -> None:
+        """
+        Persist any results left behind in a generation recovery file.
+
+        Rows are inserted into the DB and the file is deleted. Missing file is a no-op.
+        """
+        if not path.exists():
+            return
+        try:
+            with open(path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    self.generations.add(
+                        user=data["user"],
+                        project_slug=data["project_slug"],
+                        element_id=data["element_id"],
+                        model_id=data["model_id"],
+                        prompt=data["prompt"],
+                        answer=data["answer"],
+                        batch=data.get("batch"),
+                    )
+            path.unlink()
+        except Exception as ex:
+            print(f"Failed to recover generation checkpoint {path}: {ex}")
 
     def update_processes(self) -> None:
         """
@@ -1634,6 +1678,12 @@ class Project:
                 else:
                     message = f"Error for process {e.kind} : {exception}"
                 self.errors.add(message)
+
+                # recover partial generation results from the checkpoint file
+                if e.kind == "generation" and self.params.dir is not None:
+                    self._recover_generations_from_jsonl(
+                        self.params.dir.joinpath(f"gen_{e.unique_id}.jsonl")
+                    )
 
                 # specific case for project creation ; delete the project
                 if e.kind == "create_project":
@@ -1721,6 +1771,10 @@ class Project:
                                 answer=row.answer,
                                 batch=batch,
                             )
+                        if self.params.dir is not None:
+                            jsonl = self.params.dir.joinpath(f"gen_{e.unique_id}.jsonl")
+                            if jsonl.exists():
+                                jsonl.unlink()
                     case "bertopic":
                         bertopic_model = cast(BertopicComputing, e)
                         events = cast(EventsModel, results)
