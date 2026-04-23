@@ -104,7 +104,6 @@ class GenerateCall(BaseTask):
 
         try:
             # loop on all elements
-            # TODO: Why not give all the data in one go?
             c = 0
             self._write_progress(0)
             for _index, row in self.df.iterrows():

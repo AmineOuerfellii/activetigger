@@ -1282,6 +1282,40 @@ class Project:
 
         return FileResponse(path.joinpath(file_name), filename=file_name)
 
+    def _rename_generated_id_column(self, table: DataFrame) -> DataFrame:
+        """
+        Rename the generated id column and add the external id.
+
+        The "index" column from the generation table holds the slugged
+        id_internal. We expose it as id_internal and add a column with the
+        original id, named after col_id with the "dataset_" prefix stripped.
+        """
+        col_name_id = self.params.col_id if self.params.col_id else "id"
+        col_name_id = col_name_id.removeprefix("dataset_")
+        if len(table) > 0:
+            table[col_name_id] = table["index"].map(self.data.index["id_external"])
+        table = table.rename(columns={"index": "id_internal"})
+        # put col_id first, then id_internal, then the rest
+        ordered = [col_name_id, "id_internal"] + [
+            c for c in table.columns if c not in (col_name_id, "id_internal")
+        ]
+        return table[ordered]
+
+    def get_generated(
+        self, project_slug: str, username: str, params: ExportGenerationsParams
+    ) -> DataFrame:
+        """
+        Get generated elements with the original unslugged ids.
+        """
+        table = self.generations.get_generated(
+            project_slug=project_slug,
+            user_name=username,
+            params=params,
+        )
+        table_with_id = self._rename_generated_id_column(table)
+
+        return table_with_id
+
     def export_generations(
         self, project_slug: str, username: str, params: ExportGenerationsParams
     ) -> DataFrame:
@@ -1295,12 +1329,13 @@ class Project:
         # apply filters on the generated
         table["answer"] = self.generations.filter(table["answer"], params.filters)
 
-        # join the text
+        # join the text on the internal id before we swap it out
         if self.data.train is None:
             raise Exception("No train data available")
         table = table.join(self.data.train["text"], on="index")
 
-        return table
+        # expose id_internal as the frame index so it lands as the CSV index
+        return self._rename_generated_id_column(table).set_index("id_internal")
 
     def get_process(
         self, kind: str | list, user: str
