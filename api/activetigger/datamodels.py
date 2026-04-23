@@ -532,14 +532,14 @@ class GenerationModelApi(BaseModel):
 
 class MLStatisticsModel(BaseModel):
     training_kind: str | None = None
-    f1_label: dict[str, float] | None = None
-    precision_label: dict[str, float] | None = None
-    recall_label: dict[str, float] | None = None
+    f1_label: dict[str, float | None] | None = None
+    precision_label: dict[str, float | None] | None = None
+    recall_label: dict[str, float | None] | None = None
     f1_weighted: float | None = None
     f1_micro: float | None = None
     f1_macro: float | None = None
-    accuracy: float | dict[str, float] | None = None
-    precision: float | dict[str, float] | None = None
+    accuracy: float | dict[str, float | None] | None = None
+    precision: float | dict[str, float | None] | None = None
     confusion_matrix: list[list[int]] | None = None
     false_predictions: dict[str, Any] | list[Any] | None = None
     table: dict[str, Any] | None = None
