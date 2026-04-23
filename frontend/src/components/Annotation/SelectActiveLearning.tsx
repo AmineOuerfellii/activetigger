@@ -111,7 +111,7 @@ export const SelectActiveLearning: FC<SelectActiveLearningProps> = ({
     }
     const formData = {
       name: getRandomName('QuickModel') + '-default',
-      model: 'logistic-l1',
+      model: 'logistic-l2',
       scheme: currentScheme || '',
       params: {
         costLogL2: 1,
