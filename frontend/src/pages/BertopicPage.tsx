@@ -210,6 +210,10 @@ export const BertopicPage: FC = () => {
                           <td>{parameters?.bertopic_params.embedding_model}</td>
                         </tr>
                         <tr>
+                          <td>Embedding batch size</td>
+                          <td>{parameters?.bertopic_params.embedding_batch_size}</td>
+                        </tr>
+                        <tr>
                           <td>Number of keywords</td>
                           <td>{parameters?.bertopic_params.top_n_words}</td>
                         </tr>

@@ -2293,6 +2293,11 @@ export interface components {
             /** Embedding Model */
             embedding_model: string;
             /**
+             * Embedding Batch Size
+             * @default 32
+             */
+            embedding_batch_size: number;
+            /**
              * Filter Text Length
              * @default 50
              */

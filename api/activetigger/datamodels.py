@@ -484,6 +484,7 @@ class BertopicParamsModel(BaseModel):
     # umap_min_dist: float = 0.0 # Removed because 0.0 is the best value to use for clustering - Axel
     embedding_kind: str = "sentence_transformers"
     embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_batch_size: int = 32
     filter_text_length: int = 2
     input_datasets: str = "train"
 
@@ -496,6 +497,7 @@ class ComputeBertopicModel(BertopicParamsModel):
     name: str
     force_compute_embeddings: bool = False
     embedding_model: str
+    embedding_batch_size: int = 32
     language: str | None = None
     input_datasets: str = "train"
     umap_n_neighbors: int = 30
