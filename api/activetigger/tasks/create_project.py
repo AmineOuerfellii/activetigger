@@ -230,7 +230,7 @@ class CreateProject(BaseTask):
             f_na =content[content[self.params.cols_label].isna().all(axis=1)]
             # different case regarding the number of labels
             if len(f_notna) > self.params.n_train:
-                trainset = content[f_notna].sample(
+                trainset =f_notna.sample(
                     self.params.n_train, random_state=self.random_seed
                 )
             else:
