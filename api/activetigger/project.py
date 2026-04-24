@@ -382,9 +382,6 @@ class Project:
         self.users.set_auth(
             AuthUserModel(username=username, project_slug=project.project_slug, status="manager")
         )
-        self.users.set_auth(
-            AuthUserModel(username="root", project_slug=project.project_slug, status="manager")
-        )
         self.status = "created"
 
     def delete(self) -> None:
