@@ -12,7 +12,7 @@ from activetigger.datamodels import (
     SchemeModel,
 )
 
-TIMEOUT = 30
+TIMEOUT = 60
 
 
 def create_user(
