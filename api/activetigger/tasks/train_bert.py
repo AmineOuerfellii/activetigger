@@ -107,27 +107,31 @@ def compute_class_weights(dataset, label_key="labels"):
 # CustomTrainer is a subclass of Trainer that allows for custom loss computation.
 # https://stackoverflow.com/questions/70979844/using-weights-with-transformers-huggingface
 class CustomTrainer(Trainer):
-    def __init__(self, *args, class_weights=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.class_weights = class_weights
-        print("CustomTrainer initialized with class weights:", self.class_weights)
-
-    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):  # ty: ignore[invalid-method-override]
-        labels = inputs.get("labels")
-        outputs = model(**inputs)
-        logits = outputs.get("logits")
-
-        # Convert one-hot labels to class indices for CrossEntropyLoss
-        label_indices = labels.argmax(dim=-1)
-        loss_fct = nn.CrossEntropyLoss(
-            weight=self.class_weights.to(logits.device),  # ty: ignore[unresolved-attribute]
-        )
-        loss = loss_fct(
-            logits.view(-1, self.model.config.num_labels),  # ty: ignore[unresolved-attribute]
-            label_indices.view(-1),
-        )
-        return (loss, outputs) if return_outputs else loss
-
+  def __init__(self, *args,**kwargs):
+    self.class_weights=kwargs.pop("class_weights",None)
+    self.training_kind=kwargs.pop("training_kind", "multiclass")
+    super().__init__(*args,**kwargs)
+    self._loss_fct=None #avoid device mismatch 
+    print("CustomTrainer initialized with class weights:", self.class_weights)
+  def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+    labels=inputs.pop("labels")
+    outputs=model(**inputs)
+    logits=outputs.get("logits")
+    if self._loss_fct is None:
+      weights=(self.class_weights.to(logits.device) if self.class_weights is not None else None)
+      if self.training_kind=="multiclass": #AO:Left multiclass by default
+        self._loss_fct=nn.CrossEntropyLoss(weight=weights)
+      elif self.training_kind=="multilabel":
+        self._loss_fct=nn.BCEWithLogitsLoss(weight=weights)
+      else:
+         raise ValueError(f"Training kind {self.training_kind} not recognized.")
+    if self.training_kind == "multiclass":
+      label_indices=labels.argmax(dim=-1)
+      loss=self._loss_fct(logits.view(-1,self.model.config.num_labels),label_indices.view(-1))
+      print("custom loss", loss, flush=True)
+    else:
+      loss=self._loss_fct(logits,labels.float())
+    return (loss,outputs) if return_outputs else loss
 
 class TrainBert(BaseTask):
     """
@@ -425,6 +429,7 @@ class TrainBert(BaseTask):
                 eval_dataset=eval_dataset,
                 callbacks=[callback],
                 class_weights=compute_class_weights(ds["train"], label_key="labels"),
+                training_kind=self.training_kind
             )
         else:
             raise ValueError(f"Loss function {loss} not recognized.")
