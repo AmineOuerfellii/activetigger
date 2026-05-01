@@ -297,19 +297,26 @@ class TrainBert(BaseTask):
         training"""
         ids = df.reset_index()["id"].copy().to_list()
         texts = df[col_text].copy().to_list()
+        one_hot = "weight" in self.loss.lower() if self.loss is not None else False
         if training_kind == "multiclass":
             print("Preprocess multiclass")
-            labels_as_list = df[col_label].copy().replace(label2id)
-            labels_as_matrix = [
-                [int(id_label == i_column) for i_column in range(len(label2id))]
-                for id_label in labels_as_list
-            ]
+            labels_as_list = df[col_label].copy().replace(label2id).tolist() # maybe map useful
+            if one_hot:
+                labels = torch.tensor(
+                    [[int(i == j) for j in range(len(label2id))] for i in labels_as_list],
+                    dtype=torch.float32
+                )
+            else:
+                labels = torch.tensor(labels_as_list, dtype=torch.long)
         elif training_kind == "multilabel":
             print("Preprocess multilabel")
-            labels_as_matrix = annotations_to_matrix(df[col_label], list(label2id.keys())).tolist()
+            labels = torch.tensor(
+                annotations_to_matrix(df[col_label], list(label2id.keys())).tolist(),
+                dtype=torch.float32
+            )
 
         return datasets.Dataset.from_dict(
-            {"id": ids, "text": texts, "labels": torch.Tensor(labels_as_matrix)}  # ty: ignore[possibly-unresolved-reference]
+            {"id": ids, "text": texts, "labels": labels} # ty: ignore[possibly-unresolved-reference]
         ).with_format("torch")
 
     def __load_tokenizer(self, base_model: str):
@@ -550,7 +557,7 @@ class TrainBert(BaseTask):
             trust_remote_code=True,
             problem_type="multi_label_classification"
             if self.training_kind == "multilabel"
-            else None,
+            else "single_label_classification",
         ).to(device=device)
         bert_model.config.use_cache = False
         self.logger.info(f"Model loaded on {bert_model.device}")
