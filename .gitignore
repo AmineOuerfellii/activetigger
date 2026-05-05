@@ -54,7 +54,7 @@ api/test-data
 
 ## CLAUDE
 CLAUDE.md
-docs/image-projects-strategy.md
+.claude/
 
 frontend/src/assets/at-tuna.png
 frontend/src/assets/at-old.png
