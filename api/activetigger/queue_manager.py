@@ -142,6 +142,7 @@ class Queue:
             task_gpu[0].future = self.executor.submit(task_gpu[0].task)
             task_gpu[0].state = "running"
             task_gpu[0].running_since = now
+            task_gpu[0].task=None  # dereference the task to free memory
 
         # a worker available and possible to have cpu
         if (
@@ -153,7 +154,7 @@ class Queue:
             task_cpu[0].future = self.executor.submit(task_cpu[0].task)
             task_cpu[0].state = "running"
             task_cpu[0].running_since = now
-
+            task_cpu[0].task=None  # dereference the task to free memory
     async def _update_queue(self, timeout: float = 1) -> None:
         """
         Update the queue every X seconds.
