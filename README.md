@@ -48,6 +48,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml -p activetigger u
 
 The configuration file is `./docker/.env` to set the environment variables. If you want to change the default `root` password you need to modify it.
 
+> [!WARNING]
+> The API container runs as `USER_ID`/`GROUP_ID` from `docker/.env` (default `1000`/`1000`) and writes into the cloned `api/` directory. If the clone is owned by another user (for instance after `sudo git clone`, or if your user id is not 1000). Before the first `up`, set `USER_ID` and `GROUP_ID` in `docker/.env` to the output of `id -u` and `id -g`, or `chown` the clone to `1000:1000`.
+
 Docker will start:
 
 - Postgresql

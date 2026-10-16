@@ -56,6 +56,15 @@ else
   uv pip install --extra-index-url https://pypi.nvidia.com cuml-cu12
 fi
 
+# /api must be writable by the uid
+if [ ! -w /api ]; then
+  echo "ERROR: /api is not writable by uid $(id -u) (gid $(id -g))." >&2
+  echo "       The api/ directory of the clone is owned by $(stat -c '%u:%g' /api)." >&2
+  echo "       Set USER_ID/GROUP_ID in docker/.env to the owner of the clone (id -u / id -g)" >&2
+  echo "       and rebuild, or chown the clone to USER_ID:GROUP_ID (see README)." >&2
+  exit 1
+fi
+
 # Check for a config.yaml file in the api directory
 if [ ! -f /api/config.yaml ]; then
     if [ -f /api/config.yaml.sample ]; then
